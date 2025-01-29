@@ -1,43 +1,5 @@
-#include <Arduino.h>
 
-
-#define BLUE_INT 1
-#define RED_INT 2
-
-#define BLUE_SDA 9
-#define BLUE_SCL 10
-
-#define RED_SDA 47
-#define RED_SCL 48
-
-#define DEBUG_RED 39
-#define DEBUG_BLUE 41
-
-#define I2C_FREQUENCY 100000
-
-#define DAC_ADDRESS 0b1001000 // address 000 and read/write bit set to write to child
-
-#define GEN_CONFIG_REGISTER 0b11010001 //D1h
-#define GEN_CONFIG_MSB 0b00000001 //user-defined, reference datasheet
-#define GEN_CONFIG_LSB 0b11100000 //user-defined, reference datasheet
-
-#define DAC_DATA_REGISTER 0b00010000 //10h
-#define DAC_DATA_ON_MSB 0b00001111 //temp, for testing
-#define DAC_DATA_ON_LSB 0b11111100 //temp, for testing
-#define DAC_DATA_OFF 0b00000000
-
-#define TRIGGER_REGISTER 0b11010011 //D3h
-#define TRIGGER_MSB 0b00000000
-#define TRIGGER_LSB 0b00011000
-
-#define DAC_RESOLUTION 10
-#define DAC_5V 1023
-
-#include <Wire.h>
-
-
-TwoWire redLEDBus = TwoWire(0);
-TwoWire blueLEDBus = TwoWire(1);
+#include <bricks/DAC_handler.h>
 
 bool redLEDOn = false;
 bool blueLEDOn = false;
@@ -48,23 +10,7 @@ bool blueLEDOn = false;
 //Power-up the first DAC, enable VDD reference
 //SLEW_RATE: 1.6384 ms (Square wave frequency: 610 Hz)
 
-/*
-  Function to write to specific registers
-  Starting/ending transmission has to be done externally
-*/
-bool writeToDAC(TwoWire DACBus, uint8_t reg_address, uint8_t MSB, uint8_t LSB)
-{
-  //beginTransmission done externally
 
-  DACBus.write(reg_address);
-  DACBus.write(MSB);
-  DACBus.write(LSB);
-
-  return true;
-
-  //endTransmission done externally
-
-}
 
 // put function declarations here:
 void testRedInterrupt(){
@@ -77,9 +23,11 @@ void testBlueInterrupt(){
   blueLEDOn = true;
 }
 
-bool testDAC(TwoWire LEDBus){
+bool testDAC(TwoWire* LEDBus){
   // let's do a simple test where we make it turn 5V on and off at 100Hz
-  LEDBus.beginTransmission(DAC_ADDRESS); 
+
+  Serial.println("Turning LED ON");
+  LEDBus->beginTransmission(DAC_ADDRESS); 
 
   writeToDAC(LEDBus, GEN_CONFIG_REGISTER, GEN_CONFIG_MSB, GEN_CONFIG_LSB);
 
@@ -87,12 +35,15 @@ bool testDAC(TwoWire LEDBus){
 
   writeToDAC(LEDBus, TRIGGER_REGISTER, TRIGGER_MSB, TRIGGER_LSB);
 
-  LEDBus.endTransmission();
+  LEDBus->endTransmission();
 
   unsigned long timestamp = micros();
-  while(micros()-timestamp < 33000); // this should give us an APPROX square wave at 30Hz
 
-  LEDBus.beginTransmission(DAC_ADDRESS); 
+  while(micros()-timestamp < 3000000); // this should give us an APPROX square wave at 30Hz
+  Serial.println("Turning LED OFF");
+
+
+  LEDBus->beginTransmission(DAC_ADDRESS); 
   
   writeToDAC(LEDBus, GEN_CONFIG_REGISTER, GEN_CONFIG_MSB, GEN_CONFIG_LSB);
 
@@ -100,11 +51,14 @@ bool testDAC(TwoWire LEDBus){
 
   writeToDAC(LEDBus, TRIGGER_REGISTER, TRIGGER_MSB, TRIGGER_LSB);
 
-  LEDBus.endTransmission();
+  LEDBus->endTransmission();
+  
+  timestamp = micros();
+  while(micros()-timestamp < 3000000); // this should give us an APPROX square wave at 30Hz
   return true;
 }
 
-bool testBothDAC(TwoWire Bus1, TwoWire Bus2){
+bool testBothDAC(TwoWire* Bus1, TwoWire* Bus2){
   
   testDAC(Bus1);
   testDAC(Bus2);
@@ -130,6 +84,8 @@ void setup() {
 
   // put your setup code here, to run once:
   Serial.begin(115200);
+  while(!Serial);
+  delay(500);
   Serial.println("Choose your test: ");
   Serial.println("1.Test Red Interrupt");
   Serial.println("2.Test Blue Interrupt");
@@ -196,13 +152,13 @@ void loop() {
       }
       break;
     case 3:
-      testDAC(redLEDBus);
+      testDAC(&redLEDBus);
       break;
     case 4:
-      testDAC(blueLEDBus);
+      testDAC(&blueLEDBus);
       break;
     case 5:
-      testBothDAC(redLEDBus, blueLEDBus);
+      testBothDAC(&redLEDBus, &blueLEDBus);
       break;
     default:
       Serial.println("Doing Nothing");
@@ -210,5 +166,4 @@ void loop() {
   }
 
 
-  
 }

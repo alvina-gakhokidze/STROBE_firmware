@@ -48,17 +48,26 @@ void setup(){
    
     //writeToDAC(&blueLEDBus, DAC_ADDRESS, TRIGGER_REGISTER, RELOAD_NVM_MSB, RELOAD_NVM_LSB );
     writeToDAC(&blueLEDBus, DAC_ADDRESS, GEN_CONFIG_REGISTER, GEN_CONFIG_ON_MSB, GEN_CONFIG_ON_LSB );
-    writeToDAC(&blueLEDBus, DAC_ADDRESS, TRIGGER_REGISTER, SAVE_TO_NVM_MSB, SAVE_TO_NVM_LSB );
+    //writeToDAC(&blueLEDBus, DAC_ADDRESS, TRIGGER_REGISTER, SAVE_TO_NVM_MSB, SAVE_TO_NVM_LSB );
     timestamp = millis();
-    while(millis()-timestamp < 3000);
+    while(millis()-timestamp < 1);
     writeToDAC(&blueLEDBus, DAC_ADDRESS, DAC_DATA_REGISTER, DAC_DATA_OFF, DAC_DATA_OFF);
-    writeToDAC(&blueLEDBus, DAC_ADDRESS, TRIGGER_REGISTER, SAVE_TO_NVM_MSB, SAVE_TO_NVM_LSB );
+    timestamp = millis();
+    while(millis()-timestamp < 1);
+    writeToDAC(&blueLEDBus, DAC_ADDRESS, DAC_DATA_REGISTER, DAC_DATA_HALF_POWER_MSB, DAC_DATA_HALF_POWER_LSB);
+    timestamp = millis();
+    while(millis()-timestamp < 1);
+    writeToDAC(&blueLEDBus, DAC_ADDRESS, DAC_DATA_REGISTER, DAC_DATA_ON_MSB, DAC_DATA_ON_LSB);
+    timestamp = millis();
+    while(millis()-timestamp < 1);
+    writeToDAC(&blueLEDBus, DAC_ADDRESS, DAC_DATA_REGISTER, DAC_DATA_HALF_POWER_MSB, DAC_DATA_HALF_POWER_LSB);
+    //writeToDAC(&blueLEDBus, DAC_ADDRESS, TRIGGER_REGISTER, SAVE_TO_NVM_MSB, SAVE_TO_NVM_LSB );
     // writeToDAC(&blueLEDBus, DAC_ADDRESS, TRIGGER_REGISTER, RELOAD_NVM_MSB, RELOAD_NVM_LSB );
     // //writeToDAC(&blueLEDBus, DAC_ADDRESS, GEN_CONFIG_REGISTER, GEN_CONFIG_MSB, GEN_CONFIG_LSB );
-    timestamp = millis();
-    while(millis()-timestamp < 3000);
-    writeToDAC(&blueLEDBus, DAC_ADDRESS, GEN_CONFIG_REGISTER, GEN_CONFIG_ON_MSB, GEN_CONFIG_ON_LSB );
-    writeToDAC(&blueLEDBus, DAC_ADDRESS, TRIGGER_REGISTER, SAVE_TO_NVM_MSB, SAVE_TO_NVM_LSB );
+//     timestamp = millis();
+//     while(millis()-timestamp < 3000);
+//     writeToDAC(&blueLEDBus, DAC_ADDRESS, GEN_CONFIG_REGISTER, GEN_CONFIG_ON_MSB, GEN_CONFIG_ON_LSB );
+//    //writeToDAC(&blueLEDBus, DAC_ADDRESS, TRIGGER_REGISTER, SAVE_TO_NVM_MSB, SAVE_TO_NVM_LSB );
     
     
     Serial.println("testing blue led");

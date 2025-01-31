@@ -1,0 +1,96 @@
+#include <Arduino.h>
+#include <Wire.h>
+#include <configs/DAC_config.h>
+#include <bricks/DAC_handler.h>
+
+void searchBUS(TwoWire* LEDBus){
+    byte error, address;
+    int nDevices;
+    Serial.println("Scanning...");
+    nDevices = 0;
+    for(address = 1; address < 127; address++ ) {
+    LEDBus->beginTransmission(address);
+    error = LEDBus->endTransmission();
+    if (error == 0) {
+        Serial.print("I2C device found at address 0x");
+        if (address<16) {
+        Serial.print("0");
+        }
+        Serial.println(address,HEX);
+        nDevices++;
+    }
+    else if (error==4) {
+        Serial.print("Unknow error at address 0x");
+        if (address<16) {
+        Serial.print("0");
+        }
+        Serial.println(address,HEX);
+    }    
+    }
+    if (nDevices == 0) {
+    Serial.println("No I2C devices found\n");
+    }
+    else {
+    Serial.println("done\n");
+    }
+    delay(5000);     
+}
+
+void setup(){
+    Serial.begin(115200);
+    blueLEDBus.begin(BLUE_SDA, BLUE_SCL, I2C_FREQUENCY);
+    //redLEDBus.begin(RED_SDA, RED_SCL, I2C_FREQUENCY);
+
+    unsigned long timestamp = millis();
+    while(millis()-timestamp < 3000);
+    //writeToDAC(&blueLEDBus, DAC_ADDRESS, GEN_CONFIG_REGISTER, GEN_CONFIG_MSB, GEN_CONFIG_LSB );
+   
+   
+    //writeToDAC(&blueLEDBus, DAC_ADDRESS, TRIGGER_REGISTER, RELOAD_NVM_MSB, RELOAD_NVM_LSB );
+    writeToDAC(&blueLEDBus, DAC_ADDRESS, GEN_CONFIG_REGISTER, GEN_CONFIG_ON_MSB, GEN_CONFIG_ON_LSB );
+    writeToDAC(&blueLEDBus, DAC_ADDRESS, TRIGGER_REGISTER, SAVE_TO_NVM_MSB, SAVE_TO_NVM_LSB );
+    timestamp = millis();
+    while(millis()-timestamp < 3000);
+    writeToDAC(&blueLEDBus, DAC_ADDRESS, DAC_DATA_REGISTER, DAC_DATA_OFF, DAC_DATA_OFF);
+    writeToDAC(&blueLEDBus, DAC_ADDRESS, TRIGGER_REGISTER, SAVE_TO_NVM_MSB, SAVE_TO_NVM_LSB );
+    // writeToDAC(&blueLEDBus, DAC_ADDRESS, TRIGGER_REGISTER, RELOAD_NVM_MSB, RELOAD_NVM_LSB );
+    // //writeToDAC(&blueLEDBus, DAC_ADDRESS, GEN_CONFIG_REGISTER, GEN_CONFIG_MSB, GEN_CONFIG_LSB );
+    timestamp = millis();
+    while(millis()-timestamp < 3000);
+    writeToDAC(&blueLEDBus, DAC_ADDRESS, GEN_CONFIG_REGISTER, GEN_CONFIG_ON_MSB, GEN_CONFIG_ON_LSB );
+    writeToDAC(&blueLEDBus, DAC_ADDRESS, TRIGGER_REGISTER, SAVE_TO_NVM_MSB, SAVE_TO_NVM_LSB );
+    
+    
+    Serial.println("testing blue led");
+    Serial.println("Reading config register");
+    readRegisters(&blueLEDBus, GEN_CONFIG_REGISTER);
+    Serial.println("reading dac_data register");
+    readRegisters(&blueLEDBus, DAC_DATA_REGISTER);
+    Serial.println("Reading trigger register");
+    readRegisters(&blueLEDBus, TRIGGER_REGISTER);
+
+}
+
+void loop() {
+
+    // Serial.println("testing red led");
+    // searchBUS(&redLEDBus);
+    // Serial.println("testing blue led");
+    // searchBUS(&blueLEDBus);
+
+
+    // Serial.println("testing red led");
+    // Serial.println("Reading config register");
+    // readRegisters(&redLEDBus, GEN_CONFIG_REGISTER);
+    // Serial.println("reading dac_data register");
+    // readRegisters(&redLEDBus, DAC_DATA_REGISTER);
+    // Serial.println("Reading trigger register");
+    // readRegisters(&redLEDBus, TRIGGER_REGISTER);
+    // Serial.println("testing blue led");
+    // Serial.println("Reading config register");
+    // readRegisters(&blueLEDBus, GEN_CONFIG_REGISTER);
+    // Serial.println("reading dac_data register");
+    // readRegisters(&blueLEDBus, DAC_DATA_REGISTER);
+    // Serial.println("Reading trigger register");
+    // readRegisters(&blueLEDBus, TRIGGER_REGISTER);
+}

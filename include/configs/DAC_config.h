@@ -24,8 +24,10 @@
 
 
 #define DAC_DATA_REGISTER 0b00100001 //21h
-#define DAC_DATA_ON_MSB 0b11110000 //temp, for testing
-#define DAC_DATA_ON_LSB 0b00011111 //temp, for testing
+#define DAC_DATA_ON_MSB 0b11111111 //temp, for testing
+#define DAC_DATA_ON_LSB 0b11111111 //temp, for testing
+#define DAC_DATA_HALF_POWER_MSB 0b11110000
+#define DAC_DATA_HALF_POWER_LSB 0b11111111
 #define DAC_DATA_ON 0b00000011
 #define DAC_DATA_OFF 0b00000000
 

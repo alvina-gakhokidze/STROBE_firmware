@@ -2,6 +2,7 @@
 #include <Wire.h>
 #include <configs/DAC_config.h>
 #include <bricks/DAC_handler.h>
+#include <bricks/LED_handler.h>
 
 void searchBUS(TwoWire* LEDBus){
     byte error, address;

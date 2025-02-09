@@ -25,12 +25,4 @@ namespace ledTasks{
         } 
 
     }
-
-    void updateFilter(void* Filter)
-    {
-        weightedSumFilter* localFilter = (QueueHandle_t*) Filter;
-
-
-    }
-
 }

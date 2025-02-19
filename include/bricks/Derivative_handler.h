@@ -63,7 +63,8 @@ namespace Filter
             return false;
         }
 
-        this->q_in = ( this->q_out + this->q_size ) % FILTER_TAP_NUM;
+        this->q_in = ( this->q_out + FILTER_TAP_NUM - 1 ) % FILTER_TAP_NUM;
+        // we assume this queue is full except for 1 element (that's because they are intialized to 0)
 
         *(this->q_handle + this->q_in) = val;
 

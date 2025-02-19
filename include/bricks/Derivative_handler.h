@@ -24,7 +24,7 @@ namespace Filter
             unsigned long newFilteredValue = 0;
             queue_item* q_handle;
             HighPass(); 
-            bool incrementQueue(double val);
+            bool incrementQueue(float val);
             int decrementQueue();
             void deleteFilter();
             void resetFilter();
@@ -32,7 +32,7 @@ namespace Filter
 
     HighPass::HighPass()
     {
-        q_handle = (queue_item *) malloc(FILTER_TAP_NUM * sizeof(queue_item));
+        q_handle = (queue_item *) calloc(FILTER_TAP_NUM, sizeof(queue_item)); //initializes to 0
     }
 
     int HighPass::decrementQueue()
@@ -54,7 +54,7 @@ namespace Filter
         return oldVal;
     }
 
-    bool HighPass::incrementQueue(double val)
+    bool HighPass::incrementQueue(float val)
     {
 
         if(this->q_size == FILTER_TAP_NUM)
@@ -84,6 +84,8 @@ namespace Filter
         this->q_size = 0;
     }
 
+    HighPass redLEDFilter = Filter::HighPass();
+    HighPass blueLEDFilter = Filter::HighPass();
 
     float calcFDD(float val1, float val2, float time1, float time2)
     {

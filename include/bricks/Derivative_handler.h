@@ -49,7 +49,7 @@ namespace Filter
 
         this->q_out = (this->q_out + 1) % FILTER_TAP_NUM;
         
-        this->q_size--;
+        //this->q_size--;
 
         return oldVal;
     }
@@ -68,7 +68,7 @@ namespace Filter
 
         *(this->q_handle + this->q_in) = val;
 
-        this->q_size++;
+        //this->q_size++;
 
         return true;
     }

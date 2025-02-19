@@ -1,8 +1,8 @@
 #include <configs/SYSTEM_config.h>
 
-#define WEIGHTED_SUM_FILTER_DEPTH 5000 // minimum depth is 5000 values sampled at 100Hz, but 
+#define MOVING_AVERAGE_FILTER_DEPTH 5000 // minimum depth is 5000 values sampled at 100Hz, but 
 
-#define WSF_PERIOD_MS 10 // 10 ms for frequency of 100Hz
+#define MAF_PERIOD_MS 10 // 10 ms for frequency of 100Hz
 
 
 /*

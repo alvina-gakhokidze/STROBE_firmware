@@ -108,7 +108,7 @@ namespace strobeLED
     */
     void LED::trigger()
     {
-        timerAlarmWrite(this->timerHandle, this->period_us, true); // have to write a new alarm each tiem because the period_us will change
+        timerAlarmWrite(this->timerHandle, this->period_us, true); // have to write a new alarm each time because the period_us will change
         timerAlarmEnable(this->timerHandle);
         // SEMAPHORE TAKE? i dont think so
         this->ledFlyCount++; // increment total number of interactions

@@ -17,14 +17,14 @@ namespace Filter
             typedef int queue_item; // defining what type we will store in the queue
             
         public:
-            int q_front = 0;
-            int q_back = 0;
+            int q_out = 0;
+            int q_in = 0;
             int q_size = 0;
             unsigned long oldFilteredValue = 0;
             unsigned long newFilteredValue = 0;
             queue_item* q_handle;
             HighPass(); 
-            int incrementQueue(double val);
+            bool incrementQueue(double val);
             int decrementQueue();
             void deleteFilter();
             void resetFilter();
@@ -39,65 +39,49 @@ namespace Filter
     {
         int oldVal = -1;
 
-        if(this->q_size == 0)
+        if(this->q_size == 0) // queue is empty, nothing to decrement
         {
-            // queue is empty, nothing to decrement
             return -1; 
         }
         
-        oldVal = *(this->q_handle + this->q_front); // ALVINA ARRAY DEREFERENCING
-        *(this->q_handle + this->q_front) = 0; 
-        
+        oldVal = *(this->q_handle + this->q_out); // ALVINA ARRAY DEREFERENCING
+        *(this->q_handle + this->q_out) = 0; 
 
-        if(this->q_front == FILTER_TAP_NUM - 1)
-        {
-            // front was at end, so now it circles around
-            this->q_front = 0;
-        }
-        else
-        {
-            this->q_front++; 
-        }
+        this->q_out = (this->q_out + 1) % FILTER_TAP_NUM;
         
         this->q_size--;
 
         return oldVal;
     }
 
-    int HighPass::incrementQueue(double val)
+    bool HighPass::incrementQueue(double val)
     {
 
         if(this->q_size == FILTER_TAP_NUM)
         {
             // queue is full, can't add more elements
-            return -1;
+            return false;
         }
 
-        *(this->q_handle + this->q_back) = val;
+        this->q_in = ( this->q_out + this->q_size ) % FILTER_TAP_NUM;
 
-        if(this->q_back == 0)
-        {
+        *(this->q_handle + this->q_in) = val;
 
-        }
+        this->q_size++;
 
-        // ACTUALLY WE HAVE TO CHECK IF IT'S FULL!!!
-
-        if(xQueueSendToBack(this->q_handle, (void*) &val, (TickType_t) 10) == pdTRUE){
-            this->q_size++;
-            return true;
-        }
-
-        return false;
+        return true;
     }
 
     void HighPass::deleteFilter()
     {
-        vQueueDelete(this->q_handle);
+        free(this->q_handle);
     }
 
     void HighPass::resetFilter()
     {
-        xQueueReset(this->q_handle);
+        this->q_out = 0;
+        this->q_in = 0;
+        this->q_size = 0;
     }
 
 

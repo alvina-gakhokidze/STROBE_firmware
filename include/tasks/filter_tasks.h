@@ -58,63 +58,74 @@ namespace filterTasks
      * @brief calculate derivative and high pass filter ?
      * 
     */
-    void finiteDifferenceDerivative(void* filtersStruct)
+    void finiteDifferenceDerivative(void* filterStruct)
     {
         // maybe we have a semaphore here
         // and when the queue gives it, that means we have most recent average
 
-        filterParams* localFilters = (filterParams*) filtersStruct;
-        
-        if( xSemaphoreTake( localFilters->movingAverage->q_semaphore , (TickType_t) 10 ) == pdTRUE )
-        {
-            // calculate derivative, put it into other queue
-            dataSmoother::movingAverageFilter* maFilter = localFilters->movingAverage;
-            Filter::HighPass* hpFilter = localFilters->highPassFilter;
-            
-            float newDerivative = Filter::calcFDD(maFilter->oldMovingBiteAverage, maFilter->newMovingBiteAverage, 0, (float) (MAF_PERIOD_MS/1000.0)); // don't need real time 2 and time1, just need time difference which is always 10ms
-            hpFilter->decrementQueue(); // queue is full from beginning, full of 0s
-            hpFilter->incrementQueue(newDerivative); // since we always remove 1 element first, there will always be one empty when we increment
+        filterParams* localFilters = (filterParams*) filterStruct;
+        dataSmoother::movingAverageFilter* maFilter = localFilters->movingAverage;
+        Filter::HighPass* hpFilter = localFilters->highPassFilter;
 
-            int localBack = hpFilter->q_in; //we're going to be going in reverse order for the filter (because latest sample is first in high pass filter)
-            int localFront = hpFilter->q_out;
-            int localSize = FILTER_TAP_NUM;
-
-            double filtered_value = 0; // do we divide afterwards?? or do we just sum.
-
-            double time1 = millis();
-
-            // apply high pass filter weights here
-            for(int i = 0; i < FILTER_TAP_NUM; i++)
+        for(;;)
+        { 
+            if( xSemaphoreTake( localFilters->movingAverage->q_semaphore , (TickType_t) 10 ) == pdTRUE )
             {
-                // we're reading / "removing" from the back (even though typically you INSERT at the back because that's where newest data goes)
-                localBack = ( localFront + localSize - 1 ) % FILTER_TAP_NUM; 
-                int dVal = *( hpFilter->q_handle + localBack );
-                filtered_value += filter_taps[i] * (double) dVal ;
-                localSize--;
+               
+                float newDerivative = Filter::calcFDD(maFilter->oldMovingBiteAverage, maFilter->newMovingBiteAverage, 0, (float) (MAF_PERIOD_MS/1000.0)); // don't need real time 2 and time1, just need time difference which is always 10ms
+                hpFilter->decrementQueue(); // queue is full from beginning, full of 0s
+                hpFilter->incrementQueue(newDerivative); // since we always remove 1 element first, there will always be one empty when we increment
+
+                int localBack = hpFilter->q_in; //we're going to be going in reverse order for the filter (because latest sample is first in high pass filter)
+                int localFront = hpFilter->q_out;
+                int localSize = FILTER_TAP_NUM;
+
+                double filtered_value = 0; // do we divide afterwards?? or do we just sum.
+
+                double time1 = millis();
+
+                // apply high pass filter weights here
+                for(int i = 0; i < FILTER_TAP_NUM; i++)
+                {
+                    // we're reading / "removing" from the back (even though typically you INSERT at the back because that's where newest data goes)
+                    localBack = ( localFront + localSize - 1 ) % FILTER_TAP_NUM; 
+                    int dVal = *( hpFilter->q_handle + localBack );
+                    filtered_value += filter_taps[i] * (double) dVal ;
+                    localSize--;
+                }
+
+                // now here we need to pass this filtered value to the ESC tasks! we can use more semaphores
+                // INSERT CODE TO PASS VALUE HERE
+
+
+
+                double totalTime = millis() - time1; // tells us how long this loop took
             }
-
-            // now here we need to pass this filtered value to the ESC tasks! we can use more semaphores
-            // INSERT CODE TO PASS VALUE HERE
-
-
-
-
-            double totalTime = millis() - time1; // tells us how long this loop took
         }
 
-
+        
+        //vTaskDelay((TickType_t) pdMS_TO_TICKS(0.1) );
     }
     // i think in this 
 
-    void powerCalculation(void* filter)
+    void powerCalculation(void* filterStruct)
     {
+        filterParams* localFilters = (filterParams*) filterStruct;
+        dataSmoother::movingAverageFilter* maFilter = localFilters->movingAverage;
+        Filter::HighPass* hpFilter = localFilters->highPassFilter;
+
+        // here we want to do our simulink calculations
+
+        
         
     }
 
-    void frequencyCalculation(void* filter)
+    void frequencyCalculation(void* filterStruct)
     {
-
+        // have nothign to do here until we figure out frequency calculation
     }
+
+
 }
 
 

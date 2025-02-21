@@ -24,9 +24,9 @@ sampling frequency: 100 Hz
 
 */
 
-#define FILTER_TAP_NUM 75
+#define POWER_FILTER_TAP_NUM 75
 
-static double filter_taps[FILTER_TAP_NUM] = {
+static double power_filter_taps[POWER_FILTER_TAP_NUM] = {
   -0.0004024553723618049,
   0.000998159620796862,
   -0.0008582413863015407,

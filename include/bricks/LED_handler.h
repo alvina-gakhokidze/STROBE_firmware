@@ -8,19 +8,24 @@
  * The functions here handle turning the LEDs on/off at the specific frequency with the specific power
 */
 
-TwoWire redLEDBus = TwoWire(0);
-TwoWire blueLEDBus = TwoWire(1);
-
-SemaphoreHandle_t redLEDSemaphore;
-SemaphoreHandle_t blueLEDSemaphore;
-
-int redLEDFlyCount;
-int blueLEDFlyCount;
 
 
 
 namespace strobeLED
 {
+    TwoWire redLEDBus = TwoWire(0);
+    TwoWire blueLEDBus = TwoWire(1);
+
+    SemaphoreHandle_t redLEDSemaphore;
+    SemaphoreHandle_t blueLEDSemaphore;
+
+    int redLEDFlyCount;
+    int blueLEDFlyCount;
+
+    bool NO_RED_FLASHING = false;
+
+    bool NO_BLUE_FLASHING = false;
+
 
     void IRAM_ATTR redLEDOnISR();
     void IRAM_ATTR blueLEDOnISR();
@@ -36,14 +41,14 @@ namespace strobeLED
         
         public:
             hw_timer_t* timerHandle;
-            TwoWire* ledptr;
-            volatile unsigned period_us; // stores flashing frequency
-            volatile unsigned power;    // stores power 
+            TwoWire* busptr;
+            volatile unsigned long period_us; // stores flashing frequency
+            volatile unsigned long power;    // stores power 
             volatile bool state;
             volatile unsigned ledFlyCount;
             SemaphoreHandle_t ledSemaphore = NULL; // hopefully it's overwritten later
             
-            LED(TwoWire* ledptr, unsigned period_us, unsigned power, bool state);
+            LED(TwoWire* ledptr, unsigned long period_us, unsigned long power, bool state);
 
             void trigger();
             void deTrigger();
@@ -53,23 +58,23 @@ namespace strobeLED
 
     /**
      * @brief constructor for new LED object
-     * @param ledptr pointer to DAC bus that we want to control
+     * @param busptr pointer to DAC bus that we want to control
      * @param period_us chosen flashing period in microseconds (us)
      * @param power chosen power through LED
      * @param state led on or off
     */
-    LED::LED(TwoWire* ledptr, unsigned period_us, unsigned power, bool state)
+    LED::LED(TwoWire* ledptr, unsigned long period_us, unsigned long power, bool state)
     {
-        this->ledptr = ledptr;
+        this->busptr = ledptr;
         if(ledptr == &redLEDBus)
         { 
-            redLEDBus.begin(RED_SDA, RED_SCL, I2C_FREQUENCY);
+            //redLEDBus.begin(RED_SDA, RED_SCL, I2C_FREQUENCY);
             this->interruptFunction = &redLEDOnISR;
             this->timerNum = 0;
         }
         else if(ledptr == &blueLEDBus)
         {
-            blueLEDBus.begin(BLUE_SDA, BLUE_SCL, I2C_FREQUENCY);
+            //blueLEDBus.begin(BLUE_SDA, BLUE_SCL, I2C_FREQUENCY);
             this->interruptFunction = &blueLEDOnISR;
             this->timerNum = 2;
         }
@@ -92,7 +97,7 @@ namespace strobeLED
     void LED::cancel()
     {
         timerEnd(this->timerHandle); // do we ever actually need to do this?
-        registerTalk::ledOff(this->ledptr);
+        registerTalk::ledOff(this->busptr);
     }
     
     /**
@@ -118,7 +123,7 @@ namespace strobeLED
     void LED::deTrigger()
     {
         timerAlarmDisable(this->timerHandle);
-        registerTalk::ledOff(this->ledptr);
+        registerTalk::ledOff(this->busptr);
     }
 
 
@@ -130,7 +135,7 @@ namespace strobeLED
     */
     void IRAM_ATTR redLEDOnISR()
     {
-        redLED.state ? registerTalk::ledControlOn(redLED.ledptr, redLED.power) : registerTalk::ledOff(redLED.ledptr);
+        redLED.state ? registerTalk::ledControlOn(redLED.busptr, redLED.power) : registerTalk::ledOff(redLED.busptr);
         redLED.state = !redLED.state;
     }
 
@@ -139,7 +144,7 @@ namespace strobeLED
     */
     void IRAM_ATTR blueLEDOnISR()
     {
-        blueLED.state ? registerTalk::ledControlOn(blueLED.ledptr, blueLED.power) : registerTalk::ledOff(blueLED.ledptr);
+        blueLED.state ? registerTalk::ledControlOn(blueLED.busptr, blueLED.power) : registerTalk::ledOff(blueLED.busptr);
         blueLED.state = !blueLED.state;
     }
 
@@ -152,7 +157,7 @@ namespace strobeLED
      * HIGH, which means fly landed and we should flash led or LOW
      * LOW, which means fly left and we should turn LED off
     */
-     void changeRedLED()
+    void changeRedLEDFlash()
     {
         digitalRead(RED_INT) ?  redLED.trigger() : redLED.deTrigger();
     }
@@ -162,31 +167,55 @@ namespace strobeLED
      * HIGH, which means fly landed and we should flash led or LOW
      * LOW, which means fly left and we should turn LED off
     */
-     void changeBlueLED()
+    void changeBlueLEDFlash()
     {
         digitalRead(BLUE_INT) ?  blueLED.trigger() : blueLED.deTrigger();
     }
 
-    /**
-     * @brief sets interrupt pins to correct mode and attaches interrupts
-    */
-    void setupBoard()
+    void changeRedLED()
     {
-        pinMode(RED_INT, INPUT);
-        attachInterrupt(RED_INT, &changeRedLED, CHANGE);
-        // so we cannot attach more than one interrupt to the same pin
-        pinMode(BLUE_INT, INPUT);
-        attachInterrupt(BLUE_INT, &changeBlueLED, CHANGE);
-        
+        digitalRead(RED_INT) ? registerTalk::ledControlOn(redLED.busptr, redLED.power) : registerTalk::ledOff(redLED.busptr);
+        redLED.ledFlyCount++; // increment total number of interactions
+        xSemaphoreGiveFromISR(redLED.ledSemaphore, NULL); //unblock task with this function
     }
 
+    void changeBlueLED()
+    {
+        digitalRead(BLUE_INT) ? registerTalk::ledControlOn(blueLED.busptr, blueLED.power) : registerTalk::ledOff(blueLED.busptr);
+        blueLED.ledFlyCount++; // increment total number of interactions
+        xSemaphoreGiveFromISR(blueLED.ledSemaphore, NULL); //unblock task with this function
+    }
+
+
     /**
-     * @brief This task is semaphore-dependent. It will constantly check whether or not flyCount has been updated, and will be blocked if not
-     * @param ledBus the LED object we're interested in (red or blue)
+     * @brief begins i2c on led buses and sets interrupt pins to correct mode and attaches interrupts
     */
-    
+    void setupLEDs()
+    {
+        redLEDBus.begin(RED_SDA, RED_SCL, I2C_FREQUENCY);
+        blueLEDBus.begin(BLUE_SDA, BLUE_SCL, I2C_FREQUENCY);
 
+        pinMode(RED_INT, INPUT);
+        pinMode(BLUE_INT, INPUT);
 
+        if(NO_RED_FLASHING)
+        {
 
+        }
+        else
+        {
+            attachInterrupt(RED_INT, &changeRedLEDFlash, CHANGE);
+        }
+
+        if(NO_BLUE_FLASHING)
+        {
+
+        }
+        else
+        {
+            attachInterrupt(BLUE_INT, &changeBlueLEDFlash, CHANGE);
+        }
+        
+    }
 }
 

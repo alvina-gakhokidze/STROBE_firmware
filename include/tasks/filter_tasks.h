@@ -2,6 +2,7 @@
 #include <bricks/Smoothing_handler.h>
 #include <bricks/Derivative_handler.h>
 
+
 namespace filterTasks
 {
 
@@ -9,8 +10,19 @@ namespace filterTasks
     {
         dataSmoother::movingAverageFilter* movingAverage;
         Filter::HighPass* highPassFilter;
-        
     } filterParams;
+
+    filterParams redLEDFilter = 
+    {
+        &dataSmoother::redLEDData,
+        &Filter::redLEDPowerFilter
+    };
+
+    filterParams blueLEDFilter = 
+    {
+        &dataSmoother::blueLEDData,
+        &Filter::blueLEDPowerFilter
+    };
 
     /**
      * @brief this task is to fill the initial queue up, and then put it into state
@@ -51,7 +63,7 @@ namespace filterTasks
     }
 
     /**
-     * @brief calculate derivative and high pass filter ?
+     * @brief calculate derivative
      * @param passing filterParams struct which stores xLEDData in movingAverageFilter and xLEDFilter in highPassFilter
     */
     void finiteDifferenceDerivative(void* filterStruct)
@@ -65,15 +77,17 @@ namespace filterTasks
 
         for(;;)
         { 
-            //semaphore should be triggered at rate of 100Hz, everytime new value is put into queue
-            if( xSemaphoreTake( localFilters->movingAverage->q_semaphore , (TickType_t) 5 ) == pdTRUE )
+            if( localFilters->movingAverage->q_semaphore != NULL)
             {
-               
-                float newDerivative = Filter::calcFDD(maFilter->oldMovingBiteAverage, maFilter->newMovingBiteAverage, 0, (float) (MAF_PERIOD_MS/1000.0)); // don't need real time 2 and time1, just need time difference which is always 10ms
-                hpFilter->decrementQueue(); // queue is full from beginning, full of 0s
-                hpFilter->incrementQueue(newDerivative); // since we always remove 1 element first, there will always be one empty when we increment
+                //semaphore should be triggered at rate of 100Hz, everytime new value is put into queue
+                if( xSemaphoreTake( localFilters->movingAverage->q_semaphore , (TickType_t) 5 ) == pdTRUE )
+                {
+                    float newDerivative = Filter::calcFDD(maFilter->oldMovingBiteAverage, maFilter->newMovingBiteAverage, 0, (float) (MAF_PERIOD_MS/1000.0)); // don't need real time 2 and time1, just need time difference which is always 10ms
+                    hpFilter->decrementQueue(); // queue is full from beginning, full of 0s
+                    hpFilter->incrementQueue(newDerivative); // since we always remove 1 element first, there will always be one empty when we increment
 
-                xSemaphoreGive(hpFilter->highpassSemaphore);
+                    xSemaphoreGive(hpFilter->highpassSemaphore);
+                }
             }
         }
 
@@ -88,35 +102,45 @@ namespace filterTasks
     {
         Filter::HighPass* hpFilter = (Filter::HighPass*) filter;
 
-        if(xSemaphoreTake(hpFilter->highpassSemaphore, (TickType_t) 5) == pdTRUE)
+        for(;;) // infinite looping task
         {
-            int numFilterCoeffs = hpFilter->filterSize;
-            double * coeffArray = hpFilter->filterCoeffs;
-
-            int localBack = hpFilter->q_in; //we're going to be going in reverse order for the filter (because latest sample is first in high pass filter)
-            int localFront = hpFilter->q_out;
-            int localSize = numFilterCoeffs;
-
-            double filtValue = 0; // do we divide afterwards?? or do we just sum.
-
-            double time1 = millis();
-
-            // apply high pass filter weights here
-            for(int i = 0; i < numFilterCoeffs; i++)
+            if(hpFilter->highpassSemaphore != NULL)
             {
-                // we're reading / "removing" from the back (even though typically you INSERT at the back because that's where newest data goes)
-                localBack = ( localFront + localSize - 1 ) % numFilterCoeffs; 
-                int dVal = *( hpFilter->q_handle + localBack );
-                filtValue += coeffArray[i] * (double) dVal ;
-                localSize--;
+                if(xSemaphoreTake(hpFilter->highpassSemaphore, (TickType_t) 5) == pdTRUE)
+                {
+                    int numFilterCoeffs = hpFilter->filterSize;
+                    double * coeffArray = hpFilter->filterCoeffs;
+
+                    int localBack = hpFilter->q_in; //we're going to be going in reverse order for the filter (because latest sample is first in high pass filter)
+                    int localFront = hpFilter->q_out;
+                    int localSize = numFilterCoeffs;
+
+                    double filtValue = 0; // do we divide afterwards?? or do we just sum.
+
+                    double time1 = millis();
+
+                    // apply high pass filter weights here
+                    for(int i = 0; i < numFilterCoeffs; i++)
+                    {
+                        // we're reading / "removing" from the back (even though typically you INSERT at the back because that's where newest data goes)
+                        localBack = ( localFront + localSize - 1 ) % numFilterCoeffs; 
+                        int dVal = *( hpFilter->q_handle + localBack );
+                        filtValue += coeffArray[i] * (double) dVal ;
+                        localSize--;
+                    }
+
+                    hpFilter->filteredValue = filtValue; 
+
+                    double totalTime = millis() - time1; // tells us how long this loop took
+
+                    // the thing is if we give a semaphore here,
+                    // we have 4 ESC tasks, but only 2 filters. so we would need a counting semaphore...
+                    // and in that case what if one ESC somehow completed faster htan the other? how would we limit it's semaphore usage.
+
+                    // so do we only 
+                }
             }
-
-            hpFilter->filteredValue = filtValue; 
-
-            double totalTime = millis() - time1; // tells us how long this loop took
-
         }
-
 
     }
 

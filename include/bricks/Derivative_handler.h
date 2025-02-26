@@ -88,6 +88,8 @@ namespace Filter
 
     HighPass redLEDPowerFilter = Filter::HighPass(power_filter_taps, POWER_FILTER_TAP_NUM);
     HighPass blueLEDPowerFilter = Filter::HighPass(power_filter_taps, POWER_FILTER_TAP_NUM);
+    HighPass redLEDFrequencyFilter = Filter::HighPass(power_filter_taps, POWER_FILTER_TAP_NUM); // change ALVINA
+    HighPass blueLEDFrequencyFilter = Filter::HighPass(power_filter_taps, POWER_FILTER_TAP_NUM); // change ALVINA
 
     float calcFDD(float val1, float val2, float time1, float time2)
     {

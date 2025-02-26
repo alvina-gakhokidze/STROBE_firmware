@@ -114,7 +114,7 @@ namespace dataSmoother
     {
         this->timer_handle = xTimerCreate(this->name, pdMS_TO_TICKS(MAF_PERIOD_MS), pdTRUE, nullptr, callbackFunction);
         if(timer_handle == NULL) return false;
-        if(xTimerStart(this->timer_handle, (TickType_t) 10) == pdFAIL) return false;
+        if( xTimerStart(this->timer_handle, (TickType_t) 10) == pdFAIL ) return false;
         return true;
     }
 
@@ -147,10 +147,10 @@ namespace dataSmoother
     */
     int redQueueAdd()
     {
-        if(xQueueSendToBack(redLEDData.q_handle, (void*) &redLEDFlyCount, 0) == pdTRUE){
+        if(xQueueSendToBack(redLEDData.q_handle, (void*) &strobeLED::redLEDFlyCount, 0) == pdTRUE){
             
             redLEDData.oldMovingBiteAverage = redLEDData.newMovingBiteAverage;
-            redLEDData.newMovingBiteAverage = ( (unsigned long) redLEDData.oldMovingBiteAverage * redLEDData.q_size + (unsigned long) redLEDFlyCount) / ( (unsigned long) redLEDData.q_size + 1.0 );
+            redLEDData.newMovingBiteAverage = ( (unsigned long) redLEDData.oldMovingBiteAverage * redLEDData.q_size + (unsigned long) strobeLED::redLEDFlyCount) / ( (unsigned long) redLEDData.q_size + 1.0 );
             // don't need to subtract anything because nums being kicked out are assumed to be 0s (empty queue)
             redLEDData.q_size++;
             xSemaphoreGive(redLEDData.q_semaphore);
@@ -162,10 +162,10 @@ namespace dataSmoother
     */
     int blueQueueAdd()
     {
-        if(xQueueSendToBack(blueLEDData.q_handle, (void*) &blueLEDFlyCount, 0) == pdTRUE)
+        if(xQueueSendToBack(blueLEDData.q_handle, (void*) &strobeLED::blueLEDFlyCount, 0) == pdTRUE)
         {
             blueLEDData.oldMovingBiteAverage = blueLEDData.newMovingBiteAverage;
-            blueLEDData.newMovingBiteAverage = ( (unsigned long) blueLEDData.oldMovingBiteAverage * blueLEDData.q_size + (unsigned long) blueLEDFlyCount) / ( (unsigned long) blueLEDData.q_size + 1.0);
+            blueLEDData.newMovingBiteAverage = ( (unsigned long) blueLEDData.oldMovingBiteAverage * blueLEDData.q_size + (unsigned long) strobeLED::blueLEDFlyCount) / ( (unsigned long) blueLEDData.q_size + 1.0);
             blueLEDData.q_size++;
             xSemaphoreGive(blueLEDData.q_semaphore);
         }
@@ -178,7 +178,7 @@ namespace dataSmoother
     {
         int oldNum = redLEDData.decrementQueue(); // make space first
         redQueueAdd(); // add new value
-        int newNum = redLEDFlyCount; // might be a race condition ... 
+        int newNum = strobeLED::redLEDFlyCount; // might be a race condition ... 
         redLEDData.oldMovingBiteAverage = redLEDData.newMovingBiteAverage; // store old value (for FDD purposes)
         redLEDData.newMovingBiteAverage = ( redLEDData.oldMovingBiteAverage * (unsigned long) MOVING_AVERAGE_FILTER_DEPTH - oldNum + newNum ) / ( (unsigned long) MOVING_AVERAGE_FILTER_DEPTH ) ;
         // this is called the recrusive implementation of the moving average filter!
@@ -193,7 +193,7 @@ namespace dataSmoother
     {
         int oldNum = blueLEDData.decrementQueue(); // make space in queue first
         blueQueueAdd(); // add new value
-        int newNum = blueLEDFlyCount; // might be a race condition
+        int newNum = strobeLED::blueLEDFlyCount; // might be a race condition
         blueLEDData.oldMovingBiteAverage = blueLEDData.newMovingBiteAverage; // store old value (for FDD purposes)
         blueLEDData.newMovingBiteAverage = ( blueLEDData.oldMovingBiteAverage * (unsigned long) MOVING_AVERAGE_FILTER_DEPTH - oldNum + newNum ) / ( (unsigned long) MOVING_AVERAGE_FILTER_DEPTH ) ;
         xSemaphoreGive(blueLEDData.q_semaphore);

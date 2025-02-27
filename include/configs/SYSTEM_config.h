@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <Wire.h>
+#include <Preferences.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/timers.h"
 #include "freertos/task.h"
@@ -18,3 +19,5 @@
 
 #define POWER_RESISTOR_VALUE 5.0 // in ohms
 // i need to define special case for if frequency is 0
+
+

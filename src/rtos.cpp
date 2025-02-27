@@ -10,8 +10,17 @@ void setup()
     // need to initialize pins 
 
     Serial.begin(115200);
-    boardTasks::setupBoard();
+    if( boardTasks::determineUserOrEEPROM() )
+    {
+        boardTasks::setupBoard(); // get user to choose settings
+    }
+    else
+    {
+        boardTasks::loadBoardConfigs(); // load previous experiment values from EEPROM
+    }
+    
 
+    
     
     xTaskCreatePinnedToCore(
         ledTasks::updateFlyCountTask,      // Function that should be called
@@ -34,7 +43,7 @@ void setup()
     );
 
 
-    if(boardTasks::manualMode)
+    if(boardTasks::thisBoard.manualMode)
     {
         //only tasks that are needed for manual mode go here
 
@@ -42,10 +51,10 @@ void setup()
 
 
     }
-    else if(boardTasks::optimizationMode)
+    else if(boardTasks::thisBoard.optimizationMode)
     {
         // only tasks that are needed for optimization mode go here
-        if(boardTasks::redLEDOn)
+        if(boardTasks::thisBoard.redLEDOn)
         {
             xTaskCreatePinnedToCore(
                 filterTasks::finiteDifferenceDerivative,           // Function that should be called
@@ -57,7 +66,7 @@ void setup()
                 0                                       // Pin to core 0
             );
 
-            if(boardTasks::powerOn)
+            if(boardTasks::thisBoard.powerOn)
             {
                 xTaskCreatePinnedToCore(
                     filterTasks::highPassFilterTask,           // Function that should be called
@@ -81,7 +90,7 @@ void setup()
 
             }
 
-            if(boardTasks::frequencyOn)
+            if(boardTasks::thisBoard.frequencyOn)
             {
                 xTaskCreatePinnedToCore(
                     filterTasks::highPassFilterTask,           // Function that should be called
@@ -106,7 +115,7 @@ void setup()
             
         }
         
-        if(boardTasks::blueLEDOn)
+        if(boardTasks::thisBoard.blueLEDOn)
         {
             xTaskCreatePinnedToCore(
                 filterTasks::finiteDifferenceDerivative,           // Function that should be called
@@ -118,7 +127,7 @@ void setup()
                 0                                       // Pin to core 0
             );
 
-            if(boardTasks::powerOn)
+            if(boardTasks::thisBoard.powerOn)
             {
                 xTaskCreatePinnedToCore(
                     filterTasks::highPassFilterTask,           // Function that should be called
@@ -142,7 +151,7 @@ void setup()
 
             }
 
-            if(boardTasks::frequencyOn)
+            if(boardTasks::thisBoard.frequencyOn)
             {
                 xTaskCreatePinnedToCore(
                     filterTasks::highPassFilterTask,           // Function that should be called

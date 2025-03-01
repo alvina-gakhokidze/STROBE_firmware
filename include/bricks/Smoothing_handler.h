@@ -66,7 +66,7 @@ namespace dataSmoother
             void deleteFilter();
             void resetFilter();
             bool setupTimer(TimerCallbackFunction_t callbackFunction);
-            bool endTimer();
+            void endTimer();
 
     };
 
@@ -118,7 +118,7 @@ namespace dataSmoother
         return true;
     }
 
-    bool movingAverageFilter::endTimer()
+    void movingAverageFilter::endTimer()
     {
         xTimerStop(this->timer_handle, (TickType_t) 10);
         xTimerDelete(this->timer_handle, (TickType_t) 10);
@@ -145,7 +145,7 @@ namespace dataSmoother
     /**
      * @brief timer callback function to add flyCount value to redQueue at rate of 100Hz (which is how quickly the CAPDAC updates)
     */
-    int redQueueAdd()
+    void redQueueAdd(TimerHandle_t xhandle) //ALVINA since we're then using this as a regular function there may be problems
     {
         if(xQueueSendToBack(redLEDData.q_handle, (void*) &strobeLED::redLEDFlyCount, 0) == pdTRUE){
             
@@ -160,7 +160,7 @@ namespace dataSmoother
     /**
      * @brief timer callback function to add flyCount value to blueQueue at rate of 100Hz (which is how quickly the CAPDAC updates)
     */
-    int blueQueueAdd()
+    void blueQueueAdd(TimerHandle_t xhandle) // ALVINA since we're then using this as a regular function there may be problems
     {
         if(xQueueSendToBack(blueLEDData.q_handle, (void*) &strobeLED::blueLEDFlyCount, 0) == pdTRUE)
         {
@@ -174,10 +174,10 @@ namespace dataSmoother
     /**
      * @brief timer callback function for redLED that will be used once the initial moving average queue has been filled up properly
      */
-    void redQueueFiltering()
+    void redQueueFiltering(TimerHandle_t xhandle)
     {
         int oldNum = redLEDData.decrementQueue(); // make space first
-        redQueueAdd(); // add new value
+        redQueueAdd(xhandle); // add new value ALVINA -> 
         int newNum = strobeLED::redLEDFlyCount; // might be a race condition ... 
         redLEDData.oldMovingBiteAverage = redLEDData.newMovingBiteAverage; // store old value (for FDD purposes)
         redLEDData.newMovingBiteAverage = ( redLEDData.oldMovingBiteAverage * (unsigned long) MOVING_AVERAGE_FILTER_DEPTH - oldNum + newNum ) / ( (unsigned long) MOVING_AVERAGE_FILTER_DEPTH ) ;
@@ -189,10 +189,10 @@ namespace dataSmoother
     /**
     * @brief timer callback function for blueLED that will be used once the initial moving average queue has been filled up properly
     */
-    void blueQueueFiltering()
+    void blueQueueFiltering(TimerHandle_t xhandle)
     {
         int oldNum = blueLEDData.decrementQueue(); // make space in queue first
-        blueQueueAdd(); // add new value
+        blueQueueAdd(xhandle); // add new value
         int newNum = strobeLED::blueLEDFlyCount; // might be a race condition
         blueLEDData.oldMovingBiteAverage = blueLEDData.newMovingBiteAverage; // store old value (for FDD purposes)
         blueLEDData.newMovingBiteAverage = ( blueLEDData.oldMovingBiteAverage * (unsigned long) MOVING_AVERAGE_FILTER_DEPTH - oldNum + newNum ) / ( (unsigned long) MOVING_AVERAGE_FILTER_DEPTH ) ;

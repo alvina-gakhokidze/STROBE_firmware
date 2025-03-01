@@ -1,3 +1,5 @@
+#pragma once
+
 #include <configs/SYSTEM_config.h>
 
 #define MOVING_AVERAGE_FILTER_DEPTH 5000 // minimum depth is 5000 values sampled at 100Hz, but 

@@ -100,6 +100,7 @@ namespace Filter
     float calcIntegral(float val1, float val2, float time1, float time2)
     {
         float integral = (float) ( time2 - time1 ) * ( ( val1 + val2 ) / 2.0 );
+        return integral;
     }
 
 }

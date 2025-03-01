@@ -1,17 +1,17 @@
 // here we will have the tasks related to controlling the power through the LED
-
+#pragma once
 #include <bricks/ESC_handler.h>
 
 
 namespace ESCTasks
 {
 
-    typedef struct escStruct
+    struct escStruct
     {
         Controllers::ESC* ledESC;
         volatile int* perturbationSignalSign;
 
-    } escStruct;
+    };
 
     escStruct redPower = 
     {

@@ -54,7 +54,7 @@ namespace Controllers
             );
 
             bool setupTimer();
-            bool endTimer();
+            void endTimer();
     };
 
     ESC::ESC(const char* escName, float loopGain, float amplitude, float period, Filter::HighPass* LEDFilter, strobeLED::LED* LEDType, bool ESCType)
@@ -101,7 +101,7 @@ namespace Controllers
     /**
      * @brief end timer that changes sign of perturbation signal
      */
-    bool ESC::endTimer()
+    void ESC::endTimer()
     {
         xTimerStop( this->timerHandle, (TickType_t) 10 );
         xTimerDelete( this->timerHandle, (TickType_t) 10 );

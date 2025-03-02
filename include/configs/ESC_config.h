@@ -9,9 +9,11 @@
 
 #define POWER_GAIN 20.0 // loop gain
 
-#define FREQUENCY_PERTURBATION_AMPLITUDE 0.0 //filler
+#define FREQUENCY_PERTURBATION_AMPLITUDE 0.05 //filler
 
-#define FREQUENCY_GAIN 0.0 // filler
+#define FREQUENCY_GAIN 0.05 // filler
 
-#define FREQUENCY_PERTURBATION_PERIOD 0.0
+#define FREQUENCY_PERTURBATION_PERIOD 50.0
+
+// this will throw error if period is 0 because we create a timer based on the period
 

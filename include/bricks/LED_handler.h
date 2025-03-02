@@ -186,36 +186,4 @@ namespace strobeLED
         xSemaphoreGiveFromISR(blueLED.ledSemaphore, NULL); //unblock task with this function
     }
 
-
-    /**
-     * @brief begins i2c on led buses and sets interrupt pins to correct mode and attaches interrupts
-    */
-    void setupLEDs()
-    {
-        redLEDBus.begin(RED_SDA, RED_SCL, I2C_FREQUENCY);
-        blueLEDBus.begin(BLUE_SDA, BLUE_SCL, I2C_FREQUENCY);
-
-        pinMode(RED_INT, INPUT);
-        pinMode(BLUE_INT, INPUT);
-
-        if(NO_RED_FLASHING)
-        {
-
-        }
-        else
-        {
-            attachInterrupt(RED_INT, &changeRedLEDFlash, CHANGE);
-        }
-
-        if(NO_BLUE_FLASHING)
-        {
-
-        }
-        else
-        {
-            attachInterrupt(BLUE_INT, &changeBlueLEDFlash, CHANGE);
-        }
-        
-    }
 }
-

@@ -8,9 +8,9 @@
 
 
 
-#define CURR_UPP_LIMIT 0.9
+#define CURR_UPP_LIMIT 900
 
-#define CURR_LOW_LIMIT 0.1
+#define CURR_LOW_LIMIT 100
 
 
 #define FREQ_UPP_LIMIT 100.0

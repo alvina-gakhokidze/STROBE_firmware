@@ -22,13 +22,10 @@ namespace strobeLED
     int redLEDFlyCount;
     int blueLEDFlyCount;
 
-    bool NO_RED_FLASHING = false;
-
-    bool NO_BLUE_FLASHING = false;
 
 
-    void IRAM_ATTR redLEDOnISR();
-    void IRAM_ATTR blueLEDOnISR();
+    void IRAM_ATTR redLEDOnCallback();
+    void IRAM_ATTR blueLEDOnCallback();
 
     class LED
     {
@@ -42,13 +39,14 @@ namespace strobeLED
         public:
             hw_timer_t* timerHandle;
             TwoWire* busptr;
-            volatile unsigned long period_us; // stores flashing frequency
-            volatile unsigned long power;    // stores power 
+            volatile float period_us; // stores flashing frequency
+            volatile float power;    // stores power 
             volatile bool state;
+            bool flashingEnabled = true; // default set to true
             volatile unsigned ledFlyCount;
             SemaphoreHandle_t ledSemaphore = NULL; // hopefully it's overwritten later
             
-            LED(TwoWire* ledptr, unsigned long period_us, unsigned long power, bool state);
+            LED(TwoWire* ledptr, float period_us, float power, bool state);
 
             void trigger();
             void deTrigger();
@@ -63,19 +61,19 @@ namespace strobeLED
      * @param power chosen power through LED
      * @param state led on or off
     */
-    LED::LED(TwoWire* ledptr, unsigned long period_us, unsigned long power, bool state)
+    LED::LED(TwoWire* ledptr, float period_us, float power, bool state)
     {
         this->busptr = ledptr;
         if(ledptr == &redLEDBus)
         { 
             //redLEDBus.begin(RED_SDA, RED_SCL, I2C_FREQUENCY);
-            this->interruptFunction = &redLEDOnISR;
+            this->interruptFunction = &redLEDOnCallback;
             this->timerNum = 0;
         }
         else if(ledptr == &blueLEDBus)
         {
             //blueLEDBus.begin(BLUE_SDA, BLUE_SCL, I2C_FREQUENCY);
-            this->interruptFunction = &blueLEDOnISR;
+            this->interruptFunction = &blueLEDOnCallback;
             this->timerNum = 2;
         }
         else{
@@ -114,38 +112,54 @@ namespace strobeLED
     void LED::trigger()
     {
         timerAlarmWrite(this->timerHandle, this->period_us, true); // have to write a new alarm each time because the period_us will change
+        // OOLVOONOO is it correct to feed the period in microseconds? i dont think so
         timerAlarmEnable(this->timerHandle);
         // SEMAPHORE TAKE? i dont think so
-        this->ledFlyCount++; // increment total number of interactions
-        xSemaphoreGiveFromISR(this->ledSemaphore, NULL); //unblock task with this function
+        this->ledFlyCount++;
+        
     }
 
     void LED::deTrigger()
     {
         timerAlarmDisable(this->timerHandle);
-        registerTalk::ledOff(this->busptr);
+        xSemaphoreGiveFromISR(this->ledSemaphore, NULL); //unblock task with this function
+        // this semaphore wouldn't give when we were doing trigger() for some reason
+        //registerTalk::ledOff(this->busptr); 
+        // OOLVOONOO
+
+        digitalWrite(DEBUG_LED, LOW);
     }
 
 
-    LED redLED(&redLEDBus, 1, 1, true);
-    LED blueLED(&blueLEDBus, 1, 1, true);
+    LED redLED(&redLEDBus, DAFAULT_LOW_PERIOD_US, 1, true); //OOLVOONOO set initial period to something really large
+    LED blueLED(&blueLEDBus, DAFAULT_LOW_PERIOD_US, 1, true); //OOLVOONOO set initial period to something really large
 
     /**
-     * @brief ISR routine for turning red LED on/off with timer
+     * @brief callback function for turning red LED on/off with timer
     */
-    void IRAM_ATTR redLEDOnISR()
+    void redLEDOnCallback()
     {
-        redLED.state ? registerTalk::ledControlOn(redLED.busptr, redLED.power) : registerTalk::ledOff(redLED.busptr);
+        // redLED.state ? registerTalk::ledControlOn(redLED.busptr, redLED.power) : registerTalk::ledOff(redLED.busptr);
+        // redLED.state = !redLED.state;
+        //OOLVOONOO
+
+        redLED.state ? digitalWrite(DEBUG_LED, HIGH) : digitalWrite(DEBUG_LED,LOW);
         redLED.state = !redLED.state;
+
     }
 
     /**
-     * @brief ISR routine for turning blue LED on/off with timer
+     * @brief callback function for turning blue LED on/off with timer
     */
-    void IRAM_ATTR blueLEDOnISR()
+    void blueLEDOnCallback()
     {
-        blueLED.state ? registerTalk::ledControlOn(blueLED.busptr, blueLED.power) : registerTalk::ledOff(blueLED.busptr);
+        // blueLED.state ? registerTalk::ledControlOn(blueLED.busptr, blueLED.power) : registerTalk::ledOff(blueLED.busptr);
+        // blueLED.state = !blueLED.state;
+        // OOLVOONOO
+
+        blueLED.state ? digitalWrite(DEBUG_LED, HIGH) : digitalWrite(DEBUG_LED,LOW);
         blueLED.state = !blueLED.state;
+
     }
 
 
@@ -153,37 +167,81 @@ namespace strobeLED
     // the other hardware interrupt will call end () to turn the LED off
 
     /**
-     * @brief identifies if the change in RED interrupt pin was:
+     * @brief this is the red led HARDWARE INTERRUPT function.  
+     * It will be used to trigger the TIMER function
+     * it identifies if the change in RED interrupt pin was:
      * HIGH, which means fly landed and we should flash led or LOW
      * LOW, which means fly left and we should turn LED off
     */
-    void changeRedLEDFlash()
+    void IRAM_ATTR changeRedLEDFlash()
     {
         digitalRead(RED_INT) ?  redLED.trigger() : redLED.deTrigger();
     }
 
     /**
-     * @brief identifies if the change in BLUE interrupt pin was:
+     * @brief this is the blue led HARDWARE INTERRUPT function.
+     * it will be used to trigger the TIMER function
+     * it identifies if the change in BLUE interrupt pin was:
      * HIGH, which means fly landed and we should flash led or LOW
      * LOW, which means fly left and we should turn LED off
     */
-    void changeBlueLEDFlash()
+    void IRAM_ATTR changeBlueLEDFlash()
     {
         digitalRead(BLUE_INT) ?  blueLED.trigger() : blueLED.deTrigger();
     }
 
     void changeRedLED()
     {
-        digitalRead(RED_INT) ? registerTalk::ledControlOn(redLED.busptr, redLED.power) : registerTalk::ledOff(redLED.busptr);
-        redLED.ledFlyCount++; // increment total number of interactions
-        xSemaphoreGiveFromISR(redLED.ledSemaphore, NULL); //unblock task with this function
+
+        // if(digitalRead(RED_INT))
+        // {
+        //     registerTalk::ledControlOn(redLED.busptr, redLED.power);
+        //     redLED.ledFlyCount++; // increment total number of interactions
+        //     xSemaphoreGiveFromISR(redLED.ledSemaphore, NULL); //unblock task with this function
+        // }
+        // else
+        // {
+        //     registerTalk::ledOff(redLED.busptr);
+        // }
+        //OOLVOONOO
+
+        if(digitalRead(RED_INT))
+        {
+            digitalWrite(DEBUG_LED, HIGH);
+            redLED.ledFlyCount++; // increment total number of interactions
+            xSemaphoreGiveFromISR(redLED.ledSemaphore, NULL); //unblock task with this function
+        }
+        else
+        {
+            digitalWrite(DEBUG_LED, LOW);
+        }
     }
 
     void changeBlueLED()
     {
-        digitalRead(BLUE_INT) ? registerTalk::ledControlOn(blueLED.busptr, blueLED.power) : registerTalk::ledOff(blueLED.busptr);
-        blueLED.ledFlyCount++; // increment total number of interactions
-        xSemaphoreGiveFromISR(blueLED.ledSemaphore, NULL); //unblock task with this function
+
+        // if(digitalRead(BLUE_INT))
+        // {
+        //     registerTalk::ledControlOn(blueLED.busptr, blueLED.power);
+        //     blueLED.ledFlyCount++;
+        //     xSemaphoreGiveFromISR(blueLED.ledSemaphore, NULL); //unblock task with this function
+        // }
+        // else
+        // {
+        //     registerTalk::ledOff(blueLED.busptr);
+        // }
+        //OOLVOONOO
+
+        if(digitalRead(BLUE_INT))
+        {
+            digitalWrite(DEBUG_LED, HIGH);
+            blueLED.ledFlyCount++;
+        }
+        else
+        {
+            digitalWrite(DEBUG_LED, LOW);
+            xSemaphoreGiveFromISR(blueLED.ledSemaphore, NULL); //unblock task with this function
+        }
     }
 
 }

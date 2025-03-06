@@ -10,7 +10,6 @@ namespace ESCTasks
     {
         Controllers::ESC* ledESC;
         volatile int* perturbationSignalSign;
-
     };
 
     escStruct redPower = 
@@ -43,6 +42,7 @@ namespace ESCTasks
      */
     void escInit(void* escStruct)
     {
+        Serial.printf("initiating ESC\n");
         ESCTasks::escStruct* localStruct = (ESCTasks::escStruct*) escStruct;
         Controllers::ESC* localESC = (Controllers::ESC*) localStruct->ledESC;
 
@@ -58,18 +58,23 @@ namespace ESCTasks
         ESCTasks::escStruct* localStruct = (ESCTasks::escStruct*) escStruct;
 
         Controllers::ESC* localESC = (Controllers::ESC*) localStruct->ledESC;
-
+        Serial.printf("Entering ESC Task\n");
 
         for(;;)
         { // are we having this endlessly execute ? not a good idea
             int perturbationSignalSign = *(localStruct->perturbationSignalSign);
 
+            //Serial.printf("pert sig: %d\n", perturbationSignalSign);
+
             // get value from high pass filter
             float filteredValue = localESC->filterObject->filteredValue;
+            //Serial.printf("filt val: %lf\n", filteredValue);
 
             //demodulate value
-            float demodOutput = filteredValue * perturbationSignalSign * localESC->modAmplitude;
-            
+            float demodOutput = filteredValue * (float) perturbationSignalSign * localESC->modAmplitude;
+
+            //Serial.printf("demodOutput: %lf\n", demodOutput);
+
             //store old value
 
             localESC->pastModVal = localESC->curModVal;
@@ -80,8 +85,15 @@ namespace ESCTasks
 
             float intOutput = Filter::calcIntegral(localESC->pastModVal, localESC->curModVal, 0.0, (MAF_PERIOD_MS/1000.0));
 
+
+            //Serial.printf("past: %lf, cur: %lf, int output: %lf\n", localESC->pastModVal, localESC->curModVal, intOutput);
+            
+
             // multiply by loop gain
             intOutput *= localESC->loopGain;
+
+            //Serial.printf("gain output: %lf\n", localESC->pastModVal, localESC->curModVal, intOutput);
+
 
             //apply saturation limits
 
@@ -96,7 +108,7 @@ namespace ESCTasks
 
             // modulate that value
 
-            unsigned long controllerOutput = intOutput + ( perturbationSignalSign * localESC->modAmplitude );
+            float controllerOutput = intOutput + ( (float) perturbationSignalSign * localESC->modAmplitude );
             
             // pass value to LED struct so that timers can accurately turn LED on/off with desired output power/frequency
             
@@ -105,6 +117,7 @@ namespace ESCTasks
             if(powerESC)
             {
                 localESC->LEDObject->power = controllerOutput;
+                //Serial.printf("power output: %lf\n ", controllerOutput);
             }
             else
             {

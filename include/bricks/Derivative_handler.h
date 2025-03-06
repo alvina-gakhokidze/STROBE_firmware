@@ -9,20 +9,20 @@ namespace Filter
     class HighPass
     {
         private:
-            typedef int queue_item; // defining what type we will store in the queue
+            typedef float queue_item; // defining what type we will store in the queue
             
         public:
             int q_out = 0;
             int q_in = 0;
             int q_size = 0;
-            unsigned long filteredValue = 0;
+            double filteredValue = 0;
             SemaphoreHandle_t highpassSemaphore = NULL;
             queue_item* q_handle;
             double * filterCoeffs;
             int filterSize;
             HighPass(double* filter_coeffs, int size); 
             bool incrementQueue(float val);
-            int decrementQueue();
+            float decrementQueue();
             void deleteFilter();
             void resetFilter();
     };
@@ -30,14 +30,15 @@ namespace Filter
     HighPass::HighPass(double* filter_coeffs, int size)
     {
         this->filterSize = size;
+        this->q_size = size; // because it's full of zeros from the beginning
         this->filterCoeffs = filter_coeffs;
         q_handle = (queue_item *) calloc(this->filterSize, sizeof(queue_item)); //initializes to 0
         this->highpassSemaphore = xSemaphoreCreateBinary();
     }
 
-    int HighPass::decrementQueue()
+    float HighPass::decrementQueue()
     {
-        int oldVal = -1;
+        float oldVal = -1;
 
         if(this->q_size == 0) // queue is empty, nothing to decrement
         {
@@ -49,7 +50,7 @@ namespace Filter
 
         this->q_out = (this->q_out + 1) % this->filterSize;
         
-        //this->q_size--;
+        this->q_size--;
 
         return oldVal;
     }
@@ -69,7 +70,7 @@ namespace Filter
 
         *(this->q_handle + this->q_in) = val;
 
-        //this->q_size++;
+        this->q_size++;
 
         return true;
     }

@@ -2,7 +2,11 @@
 
 #include <configs/SYSTEM_config.h>
 
-#define MOVING_AVERAGE_FILTER_DEPTH 5000 // minimum depth is 5000 values sampled at 100Hz, but 
+//#define MOVING_AVERAGE_FILTER_DEPTH 5000 // minimum depth is 5000 values sampled at 100Hz, but 
+//OOLVOONO
+
+#define MOVING_AVERAGE_FILTER_DEPTH 1000
+
 
 #define MAF_PERIOD_MS 10 // 10 ms for frequency of 100Hz
 

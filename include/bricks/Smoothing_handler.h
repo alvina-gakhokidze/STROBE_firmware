@@ -1,6 +1,7 @@
 #pragma once
 #include <bricks/LED_handler.h>
 #include <configs/FILTER_config.h>
+#include <configs/Task_config.h>
 
 
 
@@ -9,41 +10,15 @@
  * In this file, we want to develop all the functions that interpret data from the interupts, and create queues
 */
 
-/**
- * We probably also want to have each queue in a class.
- * Also, I said that we need four quues but I lied. We actually only need one queue per LED (aka two)
-*/
-
-
-/**
- * i want to limit how many things happen in the interrupt that turns the leds on/off
- * i could have a different timer here that triggers and interrupt to check if the ledFlyCount has changd
- * but then that means that i'm using too much processing power constantly checking it... 
- * which im sure would interrupt the interrupts from happening
- * so it's probably better to actually write to the queue inside the interrupt itself.............
- * actually if we're manipulating a queue, it's bad practice to alter it inside of an interrupt because we have something ELSE clearing it....alignas
- * 
- * so maybe instead the task will have to constantly run and check when flyCount has changed... 
- * 
- * the flies actually only touch the esp32 every 0-3 seconds. 
- * 
- * so we could have the task running as usual, 
- * 
-*/
-
-/**
- * Include all P/I/D calculations
-*/
-
-
 
 namespace dataSmoother
 {
-    void redQueueAdd(TimerHandle_t xhandle);
-    void blueQueueAdd(TimerHandle_t xhandle);
+    void redQueueFill(TimerHandle_t xhandle);
+    void blueQueueFill(TimerHandle_t xhandle);
     void redQueueFiltering(TimerHandle_t xhandle);
     void blueQueueFiltering(TimerHandle_t xhandle);
 
+    portMUX_TYPE mutex = portMUX_INITIALIZER_UNLOCKED;
 
     class movingAverageFilter
     {
@@ -55,14 +30,14 @@ namespace dataSmoother
 
         public:
             int q_size = 0;
-            unsigned long oldMovingBiteAverage = 0;
-            unsigned long newMovingBiteAverage = 0;
+            volatile float oldMovingBiteAverage = 0;
+            volatile float newMovingBiteAverage = 0;
+            TaskHandle_t taskHandle;
             TimerCallbackFunction_t callbackFilterFilling;
             TimerCallbackFunction_t callbackFilterMovingAverage; 
             QueueHandle_t q_handle;
             SemaphoreHandle_t q_semaphore; 
             movingAverageFilter(const char* filterName); 
-            int decrementQueue();
             void deleteFilter();
             void resetFilter();
             bool setupTimer(TimerCallbackFunction_t callbackFunction);
@@ -88,20 +63,21 @@ namespace dataSmoother
         
         if(filterName == "redFilter")
         {
-            callbackFilterFilling = redQueueAdd;
+            callbackFilterFilling = redQueueFill;
             callbackFilterMovingAverage = redQueueFiltering;
+            taskHandle = TaskHandlers::redInitFilter;
         }
         else if (filterName == "blueFilter")
         {
-            callbackFilterFilling = blueQueueAdd;
+            callbackFilterFilling = blueQueueFill;
             callbackFilterMovingAverage = blueQueueFiltering;
+            taskHandle = TaskHandlers::blueInitFilter;
         }
         else
         {
             Serial.println("SUCH A FILTER DOESN'T EXIST");
             while(1);
         }
-
 
         q_handle = xQueueCreate(MOVING_AVERAGE_FILTER_DEPTH, sizeof(queue_item));
         q_semaphore = xSemaphoreCreateBinary();
@@ -124,20 +100,6 @@ namespace dataSmoother
         xTimerDelete(this->timer_handle, (TickType_t) 10);
     }
 
-    int movingAverageFilter::decrementQueue()
-    {
-        
-        int* countVal;
-        if(xQueuePeek(this->q_handle, countVal, (TickType_t) 10 ) == pdTRUE){
-            // means the Queue is not empty
-            xQueueReceive(this->q_handle, countVal, (TickType_t) 10); // pop an item from the queue
-            this->q_size--; // decrement size  
-            return *countVal;
-        }
-
-        return -1; // we never expect to have a negative number, so this indicates something is wrong
-    }
-
     movingAverageFilter redLEDData("redFilter");
     movingAverageFilter blueLEDData("blueFilter");
 
@@ -145,12 +107,12 @@ namespace dataSmoother
     /**
      * @brief timer callback function to add flyCount value to redQueue at rate of 100Hz (which is how quickly the CAPDAC updates)
     */
-    void redQueueAdd(TimerHandle_t xhandle) //ALVINA since we're then using this as a regular function there may be problems
+    void redQueueFill(TimerHandle_t xhandle) //ALVINA since we're then using this as a regular function there may be problems
     {
         if(xQueueSendToBack(redLEDData.q_handle, (void*) &strobeLED::redLEDFlyCount, 0) == pdTRUE){
             
             redLEDData.oldMovingBiteAverage = redLEDData.newMovingBiteAverage;
-            redLEDData.newMovingBiteAverage = ( (unsigned long) redLEDData.oldMovingBiteAverage * redLEDData.q_size + (unsigned long) strobeLED::redLEDFlyCount) / ( (unsigned long) redLEDData.q_size + 1.0 );
+            redLEDData.newMovingBiteAverage = ( (float) redLEDData.oldMovingBiteAverage * redLEDData.q_size + (float) strobeLED::redLEDFlyCount) / ( (float) redLEDData.q_size + 1.0 );
             // don't need to subtract anything because nums being kicked out are assumed to be 0s (empty queue)
             redLEDData.q_size++;
             xSemaphoreGive(redLEDData.q_semaphore);
@@ -160,12 +122,12 @@ namespace dataSmoother
     /**
      * @brief timer callback function to add flyCount value to blueQueue at rate of 100Hz (which is how quickly the CAPDAC updates)
     */
-    void blueQueueAdd(TimerHandle_t xhandle) // ALVINA since we're then using this as a regular function there may be problems
+    void blueQueueFill(TimerHandle_t xhandle) // ALVINA since we're then using this as a regular function there may be problems
     {
         if(xQueueSendToBack(blueLEDData.q_handle, (void*) &strobeLED::blueLEDFlyCount, 0) == pdTRUE)
         {
             blueLEDData.oldMovingBiteAverage = blueLEDData.newMovingBiteAverage;
-            blueLEDData.newMovingBiteAverage = ( (unsigned long) blueLEDData.oldMovingBiteAverage * blueLEDData.q_size + (unsigned long) strobeLED::blueLEDFlyCount) / ( (unsigned long) blueLEDData.q_size + 1.0);
+            blueLEDData.newMovingBiteAverage = ( (float) blueLEDData.oldMovingBiteAverage * blueLEDData.q_size + (float) strobeLED::blueLEDFlyCount) / ( (float) blueLEDData.q_size + 1.0);
             blueLEDData.q_size++;
             xSemaphoreGive(blueLEDData.q_semaphore);
         }
@@ -176,12 +138,12 @@ namespace dataSmoother
      */
     void redQueueFiltering(TimerHandle_t xhandle)
     {
-        int oldNum = redLEDData.decrementQueue(); // make space first
-        redQueueAdd(xhandle); // add new value ALVINA -> 
+        int oldNum;
+        xQueueReceive(redLEDData.q_handle, &oldNum, (TickType_t) 0);
         int newNum = strobeLED::redLEDFlyCount; // might be a race condition ... 
+        xQueueSendToBack(redLEDData.q_handle, (void*) &newNum, (TickType_t) 0);
         redLEDData.oldMovingBiteAverage = redLEDData.newMovingBiteAverage; // store old value (for FDD purposes)
-        redLEDData.newMovingBiteAverage = ( redLEDData.oldMovingBiteAverage * (unsigned long) MOVING_AVERAGE_FILTER_DEPTH - oldNum + newNum ) / ( (unsigned long) MOVING_AVERAGE_FILTER_DEPTH ) ;
-        // this is called the recrusive implementation of the moving average filter!
+        redLEDData.newMovingBiteAverage = ( redLEDData.oldMovingBiteAverage * (float) MOVING_AVERAGE_FILTER_DEPTH - oldNum + newNum ) / ( (float) MOVING_AVERAGE_FILTER_DEPTH ) ;
         xSemaphoreGive(redLEDData.q_semaphore);
     }
     
@@ -191,11 +153,12 @@ namespace dataSmoother
     */
     void blueQueueFiltering(TimerHandle_t xhandle)
     {
-        int oldNum = blueLEDData.decrementQueue(); // make space in queue first
-        blueQueueAdd(xhandle); // add new value
+        int oldNum; 
+        xQueueReceive(blueLEDData.q_handle, &oldNum, (TickType_t) 0);
         int newNum = strobeLED::blueLEDFlyCount; // might be a race condition
+        xQueueSendToBack(blueLEDData.q_handle, (void*) &newNum, (TickType_t) 0);
         blueLEDData.oldMovingBiteAverage = blueLEDData.newMovingBiteAverage; // store old value (for FDD purposes)
-        blueLEDData.newMovingBiteAverage = ( blueLEDData.oldMovingBiteAverage * (unsigned long) MOVING_AVERAGE_FILTER_DEPTH - oldNum + newNum ) / ( (unsigned long) MOVING_AVERAGE_FILTER_DEPTH ) ;
+        blueLEDData.newMovingBiteAverage = ( blueLEDData.oldMovingBiteAverage * (float) MOVING_AVERAGE_FILTER_DEPTH - oldNum + newNum ) / ( (float) MOVING_AVERAGE_FILTER_DEPTH ) ;
         xSemaphoreGive(blueLEDData.q_semaphore);
     }
 

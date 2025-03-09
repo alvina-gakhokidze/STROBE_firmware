@@ -20,13 +20,12 @@ namespace boardTasks
         bool powerOn;
         bool frequencyOn;
         bool manualMode;
-        bool optimizationMode;
     } boardParameters; 
 
-    boardParameters thisBoard = {false, false, false, false, true, false};
+    boardParameters thisBoard = {false, false, false, false, true};
 
     void setupBoardForParameterOptimization();
-    void setupLEDsForManualOperation(strobeLED::LED* ledObject , unsigned long period_us, unsigned long power);
+    void setupLEDsForManualOperation(strobeLED::LED* ledObject , float period_us, float power);
     void setupBoard();
     int getUserInput(int numOptions, const char* programQuestion);
     float getUserFloatInput(const char* programQuestion, float lowLimit, float upLimit );
@@ -34,8 +33,8 @@ namespace boardTasks
     bool determineUserOrEEPROM();
     void saveToPermanentMemoryBool(Preferences* memory, char* keyName, bool keyVal);
     bool getFromPermanentMemoryBool(Preferences* memory, char* keyName);
-    void saveToPermanentMemoryULong(Preferences* memory, char* keyName, unsigned long keyVal);
-    unsigned long getFromPermanentMemoryULong(Preferences* memory, char* keyName);
+    void saveToPermanentMemoryFloat(Preferences* memory, char* keyName, float keyVal);
+    float getFromPermanentMemoryFloat(Preferences* memory, char* keyName);
     void saveBoardConfigs();
     void loadBoardConfigs();
     void setupLEDs();
@@ -76,6 +75,8 @@ namespace boardTasks
     {
         // need a mode for enabling only certain LEDs
 
+        Serial.printf("Setting up board for parameter optimization\n");
+
         if(thisBoard.redLEDOn)
         {
             if(thisBoard.powerOn)
@@ -107,7 +108,7 @@ namespace boardTasks
     /**
      * @brief enables board operation for manually-chosen power and frequency
      */
-    void setupLEDsForManualOperation(strobeLED::LED* ledObject , unsigned long period_us, unsigned long power)
+    void setupLEDsForManualOperation(strobeLED::LED* ledObject , float period_us, float power)
     {
         ledObject->period_us = period_us;
         ledObject->power = power;
@@ -188,7 +189,7 @@ namespace boardTasks
             case 2:
             {
                 Serial.printf("Parameter Optimization Mode Chosen\n");
-                thisBoard.optimizationMode = true;
+                thisBoard.manualMode = false;
 
                 const char * optimizationFeatures = "What would you like to optimize:\n 1. Power \n 2. Frequency \n 3. Both \n";
                 int optimizationMode = getUserInput(3, optimizationFeatures);
@@ -203,11 +204,13 @@ namespace boardTasks
                         {
                             Serial.printf("Calibrating Red LED. \n");
                             calibrateLED(&strobeLED::redLED, frequencyString);
+                            
                         }
                         if(thisBoard.blueLEDOn)
                         {
                             Serial.printf("Calibrating Blue LED. \n");
                             calibrateLED(&strobeLED::blueLED, frequencyString);
+                            
                         }
                         break;
                     case 2:
@@ -319,7 +322,8 @@ namespace boardTasks
             Serial.printf("Value chosen by user: %.0lf mA\n", ledCurrent);
 
             // converting it to voltage that will be applied across the resistor to create desired current
-            localLED->power = ledCurrent / 1000.0 * POWER_RESISTOR_VALUE; // V = I * R formula
+            localLED->power = (float) ledCurrent / 1000.0 * POWER_RESISTOR_VALUE; // V = I * R formula
+            Serial.printf("power is %lf\n", localLED->power);
         }
 
         if(mode == frequencyString)
@@ -329,18 +333,20 @@ namespace boardTasks
             Serial.printf("Value chosen by user: %.0lf Hz\n", ledFrequency);
             if(ledFrequency == 0.0)
             {
+                Serial.printf("Frequency set to 0 so flashing disabled\n");
                 if(localLED == &strobeLED::redLED)
                 {
-                    strobeLED::NO_RED_FLASHING = true;
+                    strobeLED::redLED.flashingEnabled = false;
                 }
                 else
                 {
-                    strobeLED::NO_BLUE_FLASHING = false;
+                    strobeLED::blueLED.flashingEnabled = false;
                 }
             }
             else
             {
                 localLED->period_us =  ( 1.0 / ledFrequency ) * 1000000.0 ;
+                Serial.printf("Period is: %.0lf\n", localLED->period_us);
             }
         }
     }
@@ -397,17 +403,17 @@ namespace boardTasks
         return val;
     }
 
-    void saveToPermanentMemoryULong(Preferences* memory, char* keyName, unsigned long keyVal)
+    void saveToPermanentMemoryFloat(Preferences* memory, char* keyName, float keyVal)
     {
         memory->begin(keyName, false);
-        memory->putULong(keyName, keyVal);
+        memory->putFloat(keyName, keyVal);
         memory->end();
     }   
 
-    unsigned long getFromPermanentMemoryULong(Preferences* memory, char* keyName)
+    float getFromPermanentMemoryFloat(Preferences* memory, char* keyName)
     {
         memory->begin(keyName, false);
-        unsigned long val = memory->getULong(keyName);
+        float val = memory->getFloat(keyName);
         memory->end();
         
         return val;
@@ -423,30 +429,77 @@ namespace boardTasks
         saveToPermanentMemoryBool(&permanentMemory, powerOnString, thisBoard.powerOn);
         saveToPermanentMemoryBool(&permanentMemory, frequencyOnString, thisBoard.frequencyOn);
         saveToPermanentMemoryBool(&permanentMemory, manualModeString, thisBoard.manualMode);
-        saveToPermanentMemoryBool(&permanentMemory, optModeString, thisBoard.optimizationMode);
         
         //LED power and frequency values
-        saveToPermanentMemoryULong(&permanentMemory, redLEDPowerString, strobeLED::redLED.power);
-        saveToPermanentMemoryULong(&permanentMemory, redLEDPeriodString, strobeLED::redLED.period_us);
+        saveToPermanentMemoryFloat(&permanentMemory, redLEDPowerString, strobeLED::redLED.power);
+        saveToPermanentMemoryFloat(&permanentMemory, redLEDPeriodString, strobeLED::redLED.period_us);
 
-        saveToPermanentMemoryULong(&permanentMemory, blueLEDPowerString, strobeLED::blueLED.power);
-        saveToPermanentMemoryULong(&permanentMemory, blueLEDPeriodString, strobeLED::blueLED.period_us);
+        saveToPermanentMemoryFloat(&permanentMemory, blueLEDPowerString, strobeLED::blueLED.power);
+        saveToPermanentMemoryFloat(&permanentMemory, blueLEDPeriodString, strobeLED::blueLED.period_us);
     }
 
     void loadBoardConfigs()
     {
         thisBoard.redLEDOn = getFromPermanentMemoryBool(&permanentMemory, redLEDOnString);
+        if(thisBoard.redLEDOn)
+        {
+            Serial.printf("Red LED in operation.\n");
+        }
+        else
+        {
+            Serial.printf("Red LED not being used.\n");
+        }
         thisBoard.blueLEDOn = getFromPermanentMemoryBool(&permanentMemory, blueLEDOnString);
-        thisBoard.powerOn = getFromPermanentMemoryBool(&permanentMemory, powerOnString);
-        thisBoard.frequencyOn = getFromPermanentMemoryBool(&permanentMemory, frequencyOnString);
+        if(thisBoard.blueLEDOn)
+        {
+            Serial.printf("Blue LED in operation.\n");
+        }
+        else
+        {
+            Serial.printf("Blue LED not being used.\n");
+        }
         thisBoard.manualMode = getFromPermanentMemoryBool(&permanentMemory, manualModeString);
-        thisBoard.optimizationMode = getFromPermanentMemoryBool(&permanentMemory, optModeString);
+        if(thisBoard.manualMode)
+        {
+            Serial.printf("Manual mode on.\n");
+        }
+        else
+        {
+            Serial.printf("Optimization mode on\n");
+            thisBoard.powerOn = getFromPermanentMemoryBool(&permanentMemory, powerOnString);
+            
+            if(thisBoard.powerOn)
+            {
+                Serial.printf("Power being optimized\n");
+            }
+            else
+            {
+                Serial.printf("Power not being optimized\n");
+            }
 
-        strobeLED::redLED.power = getFromPermanentMemoryULong(&permanentMemory, redLEDPowerString);
-        strobeLED::redLED.period_us = getFromPermanentMemoryULong(&permanentMemory, redLEDPeriodString);
+            thisBoard.frequencyOn = getFromPermanentMemoryBool(&permanentMemory, frequencyOnString);
 
-        strobeLED::blueLED.power = getFromPermanentMemoryULong(&permanentMemory, blueLEDPowerString);
-        strobeLED::blueLED.period_us = getFromPermanentMemoryULong(&permanentMemory, blueLEDPeriodString);
+            if(thisBoard.frequencyOn)
+            {
+                Serial.printf("Frequency being optimized.\n");
+            }
+            else
+            {
+                Serial.printf("Frequency not being optimized.\n");
+            }
+
+            setupBoardForParameterOptimization();
+        }
+    
+        strobeLED::redLED.power = getFromPermanentMemoryFloat(&permanentMemory, redLEDPowerString);
+        Serial.printf("If applicable, previous redLED power: %lf in mA\n", strobeLED::redLED.power * 1000.0 / POWER_RESISTOR_VALUE);
+        strobeLED::redLED.period_us = getFromPermanentMemoryFloat(&permanentMemory, redLEDPeriodString);
+        Serial.printf("If applicable, previous redLED frequency: %lf in Hz\n", 1.0 / strobeLED::redLED.period_us * 1000000.0);
+
+        strobeLED::blueLED.power = getFromPermanentMemoryFloat(&permanentMemory, blueLEDPowerString);
+        Serial.printf("If applicable, previous blueLED power: %lf in mA\n", strobeLED::blueLED.power * 1000.0 / POWER_RESISTOR_VALUE);
+        strobeLED::blueLED.period_us = getFromPermanentMemoryFloat(&permanentMemory, blueLEDPeriodString);
+        Serial.printf("If applicable, previous blueLED frequency: %lf in Hz\n", 1.0 / strobeLED::blueLED.period_us * 1000000.0);
     }
 
 
@@ -464,14 +517,15 @@ namespace boardTasks
        {
            pinMode(RED_INT, INPUT);
            
-           if(strobeLED::NO_RED_FLASHING)
+           if(strobeLED::redLED.flashingEnabled)
            {
-               Serial.printf("no flashing for red LED\n");
+                Serial.printf("Attaching interrupt for red LED \n");
+                attachInterrupt(RED_INT, &strobeLED::changeRedLEDFlash, CHANGE);
            }
            else
            {
-               Serial.printf("Attaching interrupt for red LED \n");
-               attachInterrupt(RED_INT, &strobeLED::changeRedLEDFlash, CHANGE);
+               Serial.printf("no flashing for red LED\n");
+               attachInterrupt(RED_INT, &strobeLED::changeRedLED, CHANGE);
            }
        }
 
@@ -479,17 +533,24 @@ namespace boardTasks
        {
            pinMode(BLUE_INT, INPUT);
            
-           if(strobeLED::NO_BLUE_FLASHING)
+           if(strobeLED::blueLED.flashingEnabled)
            {
-               Serial.printf("no flashing for blue LED");
+                Serial.printf("Attaching interrupt for blue LED \n");
+                attachInterrupt(BLUE_INT, &strobeLED::changeBlueLEDFlash, CHANGE);
            }
            else
            {
-               Serial.printf("Attaching interrupt for blue LED \n");
-               attachInterrupt(BLUE_INT, &strobeLED::changeBlueLEDFlash, CHANGE);
+               Serial.printf("no flashing for blue LED");
+               attachInterrupt(BLUE_INT, &strobeLED::changeBlueLED, CHANGE);
            }
 
        }
+   }
+
+   void setupBoardFromPreviousExperiment()
+   {
+        boardTasks::loadBoardConfigs();
+        setupPeripherals();
    }
 
 }

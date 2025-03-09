@@ -12,8 +12,8 @@
 namespace Controllers
 {
 
-    volatile int powerPerturbationSignalSign; // need to write timer for this that changes the state based on the period
-    volatile int frequencyPerturbationSignalSign;
+    volatile int powerPerturbationSignalSign = 1; // need to write timer for this that changes the state based on the period
+    volatile int frequencyPerturbationSignalSign = 1;
 
     void powerESCCallback(TimerHandle_t xTimer);
     void frequencyESCCallback(TimerHandle_t xTimer);
@@ -57,11 +57,11 @@ namespace Controllers
             void endTimer();
     };
 
-    ESC::ESC(const char* escName, float loopGain, float amplitude, float period, Filter::HighPass* LEDFilter, strobeLED::LED* LEDType, bool ESCType)
+    ESC::ESC(const char* escName, float gain, float amplitude, float period, Filter::HighPass* LEDFilter, strobeLED::LED* LEDType, bool ESCType)
     {
         this->name = escName;
-        this->loopGain = loopGain;
-        this->modAmplitude = modAmplitude;
+        this->loopGain = gain;
+        this->modAmplitude = amplitude;
         this->modPeriod = period;
         this->escSemaphore = xSemaphoreCreateBinary();
         this->filterObject = LEDFilter;

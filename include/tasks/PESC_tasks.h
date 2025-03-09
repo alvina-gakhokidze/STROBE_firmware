@@ -10,7 +10,6 @@ namespace ESCTasks
     {
         Controllers::ESC* ledESC;
         volatile int* perturbationSignalSign;
-
     };
 
     escStruct redPower = 
@@ -59,7 +58,6 @@ namespace ESCTasks
 
         Controllers::ESC* localESC = (Controllers::ESC*) localStruct->ledESC;
 
-
         for(;;)
         { // are we having this endlessly execute ? not a good idea
             int perturbationSignalSign = *(localStruct->perturbationSignalSign);
@@ -68,8 +66,8 @@ namespace ESCTasks
             float filteredValue = localESC->filterObject->filteredValue;
 
             //demodulate value
-            float demodOutput = filteredValue * perturbationSignalSign * localESC->modAmplitude;
-            
+            float demodOutput = filteredValue * (float) perturbationSignalSign * localESC->modAmplitude;
+
             //store old value
 
             localESC->pastModVal = localESC->curModVal;
@@ -96,7 +94,7 @@ namespace ESCTasks
 
             // modulate that value
 
-            unsigned long controllerOutput = intOutput + ( perturbationSignalSign * localESC->modAmplitude );
+            float controllerOutput = intOutput + ( (float) perturbationSignalSign * localESC->modAmplitude );
             
             // pass value to LED struct so that timers can accurately turn LED on/off with desired output power/frequency
             

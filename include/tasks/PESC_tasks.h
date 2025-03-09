@@ -42,7 +42,6 @@ namespace ESCTasks
      */
     void escInit(void* escStruct)
     {
-        Serial.printf("initiating ESC\n");
         ESCTasks::escStruct* localStruct = (ESCTasks::escStruct*) escStruct;
         Controllers::ESC* localESC = (Controllers::ESC*) localStruct->ledESC;
 
@@ -58,22 +57,16 @@ namespace ESCTasks
         ESCTasks::escStruct* localStruct = (ESCTasks::escStruct*) escStruct;
 
         Controllers::ESC* localESC = (Controllers::ESC*) localStruct->ledESC;
-        Serial.printf("Entering ESC Task\n");
 
         for(;;)
         { // are we having this endlessly execute ? not a good idea
             int perturbationSignalSign = *(localStruct->perturbationSignalSign);
 
-            //Serial.printf("pert sig: %d\n", perturbationSignalSign);
-
             // get value from high pass filter
             float filteredValue = localESC->filterObject->filteredValue;
-            //Serial.printf("filt val: %lf\n", filteredValue);
 
             //demodulate value
             float demodOutput = filteredValue * (float) perturbationSignalSign * localESC->modAmplitude;
-
-            //Serial.printf("demodOutput: %lf\n", demodOutput);
 
             //store old value
 
@@ -85,15 +78,8 @@ namespace ESCTasks
 
             float intOutput = Filter::calcIntegral(localESC->pastModVal, localESC->curModVal, 0.0, (MAF_PERIOD_MS/1000.0));
 
-
-            //Serial.printf("past: %lf, cur: %lf, int output: %lf\n", localESC->pastModVal, localESC->curModVal, intOutput);
-            
-
             // multiply by loop gain
             intOutput *= localESC->loopGain;
-
-            //Serial.printf("gain output: %lf\n", localESC->pastModVal, localESC->curModVal, intOutput);
-
 
             //apply saturation limits
 
@@ -117,7 +103,6 @@ namespace ESCTasks
             if(powerESC)
             {
                 localESC->LEDObject->power = controllerOutput;
-                //Serial.printf("power output: %lf\n ", controllerOutput);
             }
             else
             {

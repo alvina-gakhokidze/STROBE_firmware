@@ -10,33 +10,6 @@
  * In this file, we want to develop all the functions that interpret data from the interupts, and create queues
 */
 
-/**
- * We probably also want to have each queue in a class.
- * Also, I said that we need four quues but I lied. We actually only need one queue per LED (aka two)
-*/
-
-
-/**
- * i want to limit how many things happen in the interrupt that turns the leds on/off
- * i could have a different timer here that triggers and interrupt to check if the ledFlyCount has changd
- * but then that means that i'm using too much processing power constantly checking it... 
- * which im sure would interrupt the interrupts from happening
- * so it's probably better to actually write to the queue inside the interrupt itself.............
- * actually if we're manipulating a queue, it's bad practice to alter it inside of an interrupt because we have something ELSE clearing it....alignas
- * 
- * so maybe instead the task will have to constantly run and check when flyCount has changed... 
- * 
- * the flies actually only touch the esp32 every 0-3 seconds. 
- * 
- * so we could have the task running as usual, 
- * 
-*/
-
-/**
- * Include all P/I/D calculations
-*/
-
-
 
 namespace dataSmoother
 {
@@ -44,8 +17,6 @@ namespace dataSmoother
     void blueQueueFill(TimerHandle_t xhandle);
     void redQueueFiltering(TimerHandle_t xhandle);
     void blueQueueFiltering(TimerHandle_t xhandle);
-    bool DEBUG_LED_STATE = HIGH; 
-    // bool LED2_STATE = HIGH;
 
     portMUX_TYPE mutex = portMUX_INITIALIZER_UNLOCKED;
 
@@ -110,8 +81,6 @@ namespace dataSmoother
 
         q_handle = xQueueCreate(MOVING_AVERAGE_FILTER_DEPTH, sizeof(queue_item));
         q_semaphore = xSemaphoreCreateBinary();
-
-
     }
 
     /**
@@ -155,14 +124,10 @@ namespace dataSmoother
     */
     void blueQueueFill(TimerHandle_t xhandle) // ALVINA since we're then using this as a regular function there may be problems
     {
-        // digitalWrite(DEBUG_LED, DEBUG_LED_STATE);
-        // DEBUG_LED_STATE = !DEBUG_LED_STATE;
         if(xQueueSendToBack(blueLEDData.q_handle, (void*) &strobeLED::blueLEDFlyCount, 0) == pdTRUE)
         {
-            //Serial.printf("Adding to Queue\n");
             blueLEDData.oldMovingBiteAverage = blueLEDData.newMovingBiteAverage;
             blueLEDData.newMovingBiteAverage = ( (float) blueLEDData.oldMovingBiteAverage * blueLEDData.q_size + (float) strobeLED::blueLEDFlyCount) / ( (float) blueLEDData.q_size + 1.0);
-            //Serial.printf("blue led moving average: %lf", blueLEDData.newMovingBiteAverage);
             blueLEDData.q_size++;
             xSemaphoreGive(blueLEDData.q_semaphore);
         }
@@ -173,9 +138,6 @@ namespace dataSmoother
      */
     void redQueueFiltering(TimerHandle_t xhandle)
     {
-        // digitalWrite(DEBUG_LED2,LED2_STATE);
-        // LED2_STATE = !LED2_STATE;
-
         int oldNum;
         xQueueReceive(redLEDData.q_handle, &oldNum, (TickType_t) 0);
         int newNum = strobeLED::redLEDFlyCount; // might be a race condition ... 
@@ -192,14 +154,12 @@ namespace dataSmoother
     void blueQueueFiltering(TimerHandle_t xhandle)
     {
         int oldNum; 
-        //portENTER_CRITICAL(&mutex);
         xQueueReceive(blueLEDData.q_handle, &oldNum, (TickType_t) 0);
         int newNum = strobeLED::blueLEDFlyCount; // might be a race condition
         xQueueSendToBack(blueLEDData.q_handle, (void*) &newNum, (TickType_t) 0);
         blueLEDData.oldMovingBiteAverage = blueLEDData.newMovingBiteAverage; // store old value (for FDD purposes)
         blueLEDData.newMovingBiteAverage = ( blueLEDData.oldMovingBiteAverage * (float) MOVING_AVERAGE_FILTER_DEPTH - oldNum + newNum ) / ( (float) MOVING_AVERAGE_FILTER_DEPTH ) ;
         xSemaphoreGive(blueLEDData.q_semaphore);
-        //portEXIT_CRITICAL(&mutex)
     }
 
 

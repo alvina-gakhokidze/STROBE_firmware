@@ -64,9 +64,8 @@ namespace boardTasks
         Serial.printf("Setting up LEDs\n");
         setupLEDs();
         Serial.printf("Setting up DACs\n");
-        // registerTalk::setupDAC(&strobeLED::redLEDBus);
-        // registerTalk::setupDAC(&strobeLED::blueLEDBus);
-        // OOLVOONOO
+        registerTalk::setupDAC(&strobeLED::redLEDBus);
+        registerTalk::setupDAC(&strobeLED::blueLEDBus);
     }
 
     /**
@@ -182,7 +181,6 @@ namespace boardTasks
                     Serial.printf("Time to choose the parameters for the blue LED! \n");
                     calibrateLED(&strobeLED::blueLED, powerString);
                     calibrateLED(&strobeLED::blueLED, frequencyString);
-                    Serial.printf("finished calibrating blue LED");
                 }
                 Serial.printf("Now setting up peripherals\n");
                 setupPeripherals();
@@ -512,9 +510,8 @@ namespace boardTasks
    void setupLEDs()
    {
        Serial.printf("Beggining i2c busses\n");
-    //    strobeLED::redLEDBus.begin(RED_SDA, RED_SCL, I2C_FREQUENCY);
-    //    strobeLED::blueLEDBus.begin(BLUE_SDA, BLUE_SCL, I2C_FREQUENCY);
-    //OOLVOONOO
+       strobeLED::redLEDBus.begin(RED_SDA, RED_SCL, I2C_FREQUENCY);
+       strobeLED::blueLEDBus.begin(BLUE_SDA, BLUE_SCL, I2C_FREQUENCY);
 
        if(boardTasks::thisBoard.redLEDOn)
        {

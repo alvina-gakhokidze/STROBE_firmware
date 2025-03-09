@@ -38,7 +38,7 @@ namespace Filter
 
     float HighPass::decrementQueue()
     {
-        float oldVal = -1;
+        float oldVal = -1.0;
 
         if(this->q_size == 0) // queue is empty, nothing to decrement
         {

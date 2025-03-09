@@ -1,7 +1,5 @@
 
-//#define BLUE_INT 1
-//OOLVOONOO
-#define BLUE_INT 4
+#define BLUE_INT 1
 #define RED_INT 2
 
 #define BLUE_SDA 9

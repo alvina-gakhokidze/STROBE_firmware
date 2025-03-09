@@ -5,8 +5,6 @@
 #include "freertos/timers.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
-#include <esp_task_wdt.h> 
-
 
 #define CURR_UPP_LIMIT 900
 
@@ -22,11 +20,5 @@
 
 #define POWER_RESISTOR_VALUE 5.0 // in ohms
 // i need to define special case for if frequency is 0
-
-
-#define DEBUG_LED 23
-#define DEBUG_TRIGGER 17
-
-#define DEBUG_LED2 15
 
 

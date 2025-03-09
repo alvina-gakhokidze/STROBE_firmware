@@ -66,13 +66,11 @@ namespace strobeLED
         this->busptr = ledptr;
         if(ledptr == &redLEDBus)
         { 
-            //redLEDBus.begin(RED_SDA, RED_SCL, I2C_FREQUENCY);
             this->interruptFunction = &redLEDOnCallback;
             this->timerNum = 0;
         }
         else if(ledptr == &blueLEDBus)
         {
-            //blueLEDBus.begin(BLUE_SDA, BLUE_SCL, I2C_FREQUENCY);
             this->interruptFunction = &blueLEDOnCallback;
             this->timerNum = 2;
         }
@@ -124,10 +122,7 @@ namespace strobeLED
         timerAlarmDisable(this->timerHandle);
         xSemaphoreGiveFromISR(this->ledSemaphore, NULL); //unblock task with this function
         // this semaphore wouldn't give when we were doing trigger() for some reason
-        //registerTalk::ledOff(this->busptr); 
-        // OOLVOONOO
-
-        digitalWrite(DEBUG_LED, LOW);
+        registerTalk::ledOff(this->busptr); 
     }
 
 
@@ -139,13 +134,8 @@ namespace strobeLED
     */
     void redLEDOnCallback()
     {
-        // redLED.state ? registerTalk::ledControlOn(redLED.busptr, redLED.power) : registerTalk::ledOff(redLED.busptr);
-        // redLED.state = !redLED.state;
-        //OOLVOONOO
-
-        redLED.state ? digitalWrite(DEBUG_LED, HIGH) : digitalWrite(DEBUG_LED,LOW);
+        redLED.state ? registerTalk::ledControlOn(redLED.busptr, redLED.power) : registerTalk::ledOff(redLED.busptr);
         redLED.state = !redLED.state;
-
     }
 
     /**
@@ -153,18 +143,9 @@ namespace strobeLED
     */
     void blueLEDOnCallback()
     {
-        // blueLED.state ? registerTalk::ledControlOn(blueLED.busptr, blueLED.power) : registerTalk::ledOff(blueLED.busptr);
-        // blueLED.state = !blueLED.state;
-        // OOLVOONOO
-
-        blueLED.state ? digitalWrite(DEBUG_LED, HIGH) : digitalWrite(DEBUG_LED,LOW);
+        blueLED.state ? registerTalk::ledControlOn(blueLED.busptr, blueLED.power) : registerTalk::ledOff(blueLED.busptr);
         blueLED.state = !blueLED.state;
-
     }
-
-
-    // one hardware interrupt will call trigger() to start flashing the LED
-    // the other hardware interrupt will call end () to turn the LED off
 
     /**
      * @brief this is the red led HARDWARE INTERRUPT function.  
@@ -193,54 +174,30 @@ namespace strobeLED
     void changeRedLED()
     {
 
-        // if(digitalRead(RED_INT))
-        // {
-        //     registerTalk::ledControlOn(redLED.busptr, redLED.power);
-        //     redLED.ledFlyCount++; // increment total number of interactions
-        //     xSemaphoreGiveFromISR(redLED.ledSemaphore, NULL); //unblock task with this function
-        // }
-        // else
-        // {
-        //     registerTalk::ledOff(redLED.busptr);
-        // }
-        //OOLVOONOO
-
         if(digitalRead(RED_INT))
         {
-            digitalWrite(DEBUG_LED, HIGH);
+            registerTalk::ledControlOn(redLED.busptr, redLED.power);
             redLED.ledFlyCount++; // increment total number of interactions
             xSemaphoreGiveFromISR(redLED.ledSemaphore, NULL); //unblock task with this function
         }
         else
         {
-            digitalWrite(DEBUG_LED, LOW);
+            registerTalk::ledOff(redLED.busptr);
         }
     }
 
     void changeBlueLED()
     {
 
-        // if(digitalRead(BLUE_INT))
-        // {
-        //     registerTalk::ledControlOn(blueLED.busptr, blueLED.power);
-        //     blueLED.ledFlyCount++;
-        //     xSemaphoreGiveFromISR(blueLED.ledSemaphore, NULL); //unblock task with this function
-        // }
-        // else
-        // {
-        //     registerTalk::ledOff(blueLED.busptr);
-        // }
-        //OOLVOONOO
-
         if(digitalRead(BLUE_INT))
         {
-            digitalWrite(DEBUG_LED, HIGH);
+            registerTalk::ledControlOn(blueLED.busptr, blueLED.power);
             blueLED.ledFlyCount++;
+            xSemaphoreGiveFromISR(blueLED.ledSemaphore, NULL); //unblock task with this function
         }
         else
         {
-            digitalWrite(DEBUG_LED, LOW);
-            xSemaphoreGiveFromISR(blueLED.ledSemaphore, NULL); //unblock task with this function
+            registerTalk::ledOff(blueLED.busptr);
         }
     }
 

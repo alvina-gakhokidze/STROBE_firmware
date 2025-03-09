@@ -12,13 +12,11 @@
 namespace Controllers
 {
 
-    volatile int powerPerturbationSignalSign = 1.0; // need to write timer for this that changes the state based on the period
-    volatile int frequencyPerturbationSignalSign = 1.0;
+    volatile int powerPerturbationSignalSign = 1; // need to write timer for this that changes the state based on the period
+    volatile int frequencyPerturbationSignalSign = 1;
 
     void powerESCCallback(TimerHandle_t xTimer);
     void frequencyESCCallback(TimerHandle_t xTimer);
-
-    int LED2_STATE = HIGH;
 
     class ESC
     {
@@ -157,8 +155,6 @@ namespace Controllers
      */
     void powerESCCallback(TimerHandle_t xTimer)
     {
-        digitalWrite(DEBUG_LED2, LED2_STATE);
-        LED2_STATE = !LED2_STATE;
         Controllers::powerPerturbationSignalSign *= (-1); // sign change
     }
 

@@ -11,14 +11,6 @@ void setup()
 
     Serial.begin(115200);
 
-    pinMode(DEBUG_LED, OUTPUT); // just for debugging purposes
-    pinMode(DEBUG_TRIGGER, OUTPUT);
-    pinMode(DEBUG_LED2, OUTPUT);
-    
-    digitalWrite(DEBUG_LED, LOW);
-    digitalWrite(DEBUG_TRIGGER, LOW);
-    digitalWrite(DEBUG_LED2, LOW);
-
     Serial.println("hello world");
 
     if( boardTasks::determineUserOrEEPROM() )
@@ -56,16 +48,6 @@ void setup()
         0                                // Pin to core 0
     );
 
-    xTaskCreatePinnedToCore(
-        filterTasks::flashingTask,      // Function that should be called
-        "Flashing Trigger",             // Name of the task (for debugging)
-        5000,                            // Stack size (bytes)
-        NULL,                            // Parameter to pass
-        4,                               // Task priority
-        &TaskHandlers::ledFlashingTask, // Task handle
-        0                                // Pin to core 0
-    );
-
 
 
     if(boardTasks::thisBoard.manualMode)
@@ -73,9 +55,7 @@ void setup()
         //only tasks that are needed for manual mode go here
 
         // nothing more needed actually
-        Serial.printf("Manual Mode chosen\n");
-
- 
+        Serial.printf("Manual Mode chosen\n"); 
     }
     else
     {

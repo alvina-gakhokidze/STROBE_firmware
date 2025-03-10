@@ -22,6 +22,8 @@
 #define GEN_CONFIG_ON_MSB 0b00010001 //user-defined, reference datasheet
 #define GEN_CONFIG_ON_LSB 0b11100000 //user-defined, reference datasheet
 
+#define GEN_CONFIG_OFF_MSB 0b00010001
+#define GEN_CONFIG_OFF_LSB 0b11110000
 
 #define DAC_DATA_REGISTER 0b00100001 //21h
 #define DAC_DATA_ON_MSB 0b11111111 //temp, for testing
@@ -41,4 +43,5 @@
 
 #define DAC_RESOLUTION 10
 #define DAC_5V 1023
+
 

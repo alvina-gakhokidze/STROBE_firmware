@@ -8,6 +8,10 @@ namespace TaskHandlers
         // .. (use these handles to control tasks later)
         getRedLEDFlyCount = NULL,
         getBlueLEDFlyCount = NULL,
+        redLEDToggle = NULL,
+        blueLEDToggle = NULL,
+        redLEDFlash = NULL,
+        blueLEDFlash = NULL,
         redMovingAverage = NULL,
         blueMovingAverage = NULL,
         bluePrintingTask = NULL,

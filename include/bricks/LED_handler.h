@@ -211,7 +211,7 @@ namespace strobeLED
             // xSemaphoreGiveFromISR(redLED.ledSemaphore, NULL); //unblock task with this function
 
             xSemaphoreGiveFromISR(redLED.onSemaphore, NULL); //unblock task with this function
-            xSemaphoreGive(redLED.ledSemaphore); //unblock task with this function
+            xSemaphoreGiveFromISR(redLED.ledSemaphore,NULL); //unblock task with this function
             redLED.ledFlyCount++;
         }
         else
@@ -230,7 +230,7 @@ namespace strobeLED
             //blueLED.ledFlyCount++;
             //xSemaphoreGiveFromISR(blueLED.ledSemaphore, NULL); //unblock task with this function
             xSemaphoreGiveFromISR(blueLED.onSemaphore, NULL); //unblock task with this function
-            xSemaphoreGive(blueLED.ledSemaphore); //unblock task with this function
+            xSemaphoreGiveFromISR(blueLED.ledSemaphore, NULL); //unblock task with this function
             blueLED.ledFlyCount++;
         }
         else

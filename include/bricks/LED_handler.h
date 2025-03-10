@@ -45,6 +45,10 @@ namespace strobeLED
             bool flashingEnabled = true; // default set to true
             volatile unsigned ledFlyCount;
             SemaphoreHandle_t ledSemaphore = NULL; // hopefully it's overwritten later
+            SemaphoreHandle_t onSemaphore = NULL; // hopefully it's overwritten later
+            SemaphoreHandle_t offSemaphore = NULL; // hopefully it's overwritten later
+            SemaphoreHandle_t onFlashSemaphore = NULL; // hopefully it's overwritten later
+            SemaphoreHandle_t offFlashSemaphore = NULL; // hopefully it's overwritten later
             
             LED(TwoWire* ledptr, float period_us, float power, bool state);
 
@@ -84,6 +88,10 @@ namespace strobeLED
         this->state = state;
         this->timerHandle = timerBegin(this->timerNum, 80, true);
         this->ledSemaphore = xSemaphoreCreateBinary();
+        this->onSemaphore = xSemaphoreCreateBinary();
+        this->offSemaphore = xSemaphoreCreateBinary();
+        this->onFlashSemaphore = xSemaphoreCreateBinary();
+        this->offFlashSemaphore = xSemaphoreCreateBinary();
         attachTimer(); // can i do this? use a method inside of the class constructor
     }
 
@@ -93,7 +101,7 @@ namespace strobeLED
     void LED::cancel()
     {
         timerEnd(this->timerHandle); // do we ever actually need to do this?
-        registerTalk::ledOff(this->busptr);
+        //registerTalk::ledOff(this->busptr);
     }
     
     /**
@@ -114,15 +122,22 @@ namespace strobeLED
         timerAlarmEnable(this->timerHandle);
         // SEMAPHORE TAKE? i dont think so
         this->ledFlyCount++;
-        
+        //digitalWrite(DEBUG_LED,HIGH);    
     }
 
     void LED::deTrigger()
     {
         timerAlarmDisable(this->timerHandle);
-        xSemaphoreGiveFromISR(this->ledSemaphore, NULL); //unblock task with this function
+        xSemaphoreGive(this->ledSemaphore); //unblock task with this function
         // this semaphore wouldn't give when we were doing trigger() for some reason
-        registerTalk::ledOff(this->busptr); 
+       
+        xSemaphoreGive(this->offSemaphore);
+        
+        //registerTalk::ledOff(this->busptr);
+
+        //digitalWrite(DEBUG_LED, LOW);
+       
+        //registerTalk::ledOff(this->busptr); 
     }
 
 
@@ -134,8 +149,15 @@ namespace strobeLED
     */
     void redLEDOnCallback()
     {
-        redLED.state ? registerTalk::ledControlOn(redLED.busptr, redLED.power) : registerTalk::ledOff(redLED.busptr);
+        // redLED.state ? registerTalk::ledControlOn(redLED.busptr, redLED.power) : registerTalk::ledOff(redLED.busptr);
+        // redLED.state = !redLED.state;
+
+        redLED.state ? xSemaphoreGiveFromISR(redLED.onSemaphore, NULL) : xSemaphoreGiveFromISR(redLED.offSemaphore,NULL);
+        //digitalWrite(DEBUG_LED, redLED.state);
         redLED.state = !redLED.state;
+
+        // redLED.state ? digitalWrite(DEBUG_LED,HIGH) : digitalWrite(DEBUG_LED,LOW);
+        // redLED.state = !redLED.state;
     }
 
     /**
@@ -143,7 +165,10 @@ namespace strobeLED
     */
     void blueLEDOnCallback()
     {
-        blueLED.state ? registerTalk::ledControlOn(blueLED.busptr, blueLED.power) : registerTalk::ledOff(blueLED.busptr);
+        // blueLED.state ? registerTalk::ledControlOn(blueLED.busptr, blueLED.power) : registerTalk::ledOff(blueLED.busptr);
+        // blueLED.state = !blueLED.state;
+
+        blueLED.state ? xSemaphoreGiveFromISR(blueLED.onSemaphore, NULL) : xSemaphoreGiveFromISR(blueLED.offSemaphore, NULL);
         blueLED.state = !blueLED.state;
     }
 
@@ -156,7 +181,11 @@ namespace strobeLED
     */
     void IRAM_ATTR changeRedLEDFlash()
     {
-        digitalRead(RED_INT) ?  redLED.trigger() : redLED.deTrigger();
+        //digitalRead(RED_INT) ?  redLED.trigger() : redLED.deTrigger();
+
+        digitalRead(RED_INT) ?  xSemaphoreGiveFromISR(redLED.onFlashSemaphore, NULL) : xSemaphoreGiveFromISR(redLED.offFlashSemaphore,NULL);
+        
+        // so we know we enter this
     }
 
     /**
@@ -168,7 +197,8 @@ namespace strobeLED
     */
     void IRAM_ATTR changeBlueLEDFlash()
     {
-        digitalRead(BLUE_INT) ?  blueLED.trigger() : blueLED.deTrigger();
+        //digitalRead(BLUE_INT) ?  blueLED.trigger() : blueLED.deTrigger();
+        digitalRead(RED_INT) ?  xSemaphoreGiveFromISR(blueLED.onFlashSemaphore, NULL) : xSemaphoreGiveFromISR(blueLED.offFlashSemaphore,NULL);
     }
 
     void changeRedLED()
@@ -176,13 +206,18 @@ namespace strobeLED
 
         if(digitalRead(RED_INT))
         {
-            registerTalk::ledControlOn(redLED.busptr, redLED.power);
-            redLED.ledFlyCount++; // increment total number of interactions
-            xSemaphoreGiveFromISR(redLED.ledSemaphore, NULL); //unblock task with this function
+            // registerTalk::ledControlOn(redLED.busptr, redLED.power);
+            // redLED.ledFlyCount++; // increment total number of interactions
+            // xSemaphoreGiveFromISR(redLED.ledSemaphore, NULL); //unblock task with this function
+
+            xSemaphoreGiveFromISR(redLED.onSemaphore, NULL); //unblock task with this function
+            xSemaphoreGive(redLED.ledSemaphore); //unblock task with this function
+            redLED.ledFlyCount++;
         }
         else
         {
-            registerTalk::ledOff(redLED.busptr);
+            //registerTalk::ledOff(redLED.busptr);
+            xSemaphoreGiveFromISR(redLED.offSemaphore, NULL); //unblock task with this function
         }
     }
 
@@ -191,13 +226,17 @@ namespace strobeLED
 
         if(digitalRead(BLUE_INT))
         {
-            registerTalk::ledControlOn(blueLED.busptr, blueLED.power);
+            //registerTalk::ledControlOn(blueLED.busptr, blueLED.power);
+            //blueLED.ledFlyCount++;
+            //xSemaphoreGiveFromISR(blueLED.ledSemaphore, NULL); //unblock task with this function
+            xSemaphoreGiveFromISR(blueLED.onSemaphore, NULL); //unblock task with this function
+            xSemaphoreGive(blueLED.ledSemaphore); //unblock task with this function
             blueLED.ledFlyCount++;
-            xSemaphoreGiveFromISR(blueLED.ledSemaphore, NULL); //unblock task with this function
         }
         else
         {
-            registerTalk::ledOff(blueLED.busptr);
+            //registerTalk::ledOff(blueLED.busptr);
+            xSemaphoreGiveFromISR(blueLED.offSemaphore, NULL); //unblock task with this function
         }
     }
 

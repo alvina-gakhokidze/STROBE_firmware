@@ -27,6 +27,7 @@ namespace strobeLED
     void IRAM_ATTR redLEDOnCallback();
     void IRAM_ATTR blueLEDOnCallback();
 
+
     class LED
     {
         private:
@@ -42,6 +43,7 @@ namespace strobeLED
             volatile float period_us; // stores flashing frequency
             volatile float power;    // stores power 
             volatile bool state;
+            bool ledOn;
             bool flashingEnabled = true; // default set to true
             volatile unsigned ledFlyCount;
             SemaphoreHandle_t ledSemaphore = NULL; // hopefully it's overwritten later
@@ -68,6 +70,7 @@ namespace strobeLED
     LED::LED(TwoWire* ledptr, float period_us, float power, bool state)
     {
         this->busptr = ledptr;
+        this->ledOn = false;
         if(ledptr == &redLEDBus)
         { 
             this->interruptFunction = &redLEDOnCallback;
@@ -122,7 +125,10 @@ namespace strobeLED
         timerAlarmEnable(this->timerHandle);
         // SEMAPHORE TAKE? i dont think so
         this->ledFlyCount++;
-        //digitalWrite(DEBUG_LED,HIGH);    
+        //digitalWrite(DEBUG_LED,HIGH); 
+        
+        this->ledOn = true;
+        //digitalWrite(DEBUG_LED,HIGH);
     }
 
     void LED::deTrigger()
@@ -131,11 +137,18 @@ namespace strobeLED
         xSemaphoreGive(this->ledSemaphore); //unblock task with this function
         // this semaphore wouldn't give when we were doing trigger() for some reason
        
-        xSemaphoreGive(this->offSemaphore);
-        
-        //registerTalk::ledOff(this->busptr);
+        //xSemaphoreGive(this->offSemaphore);
 
-        //digitalWrite(DEBUG_LED, LOW);
+        this->ledOn=false;
+        //digitalWrite(DEBUG_LED,LOW);
+
+        // xSemaphoreTake(this->onSemaphore, (TickType_t) 20);
+        // xSemaphoreTake(this->onFlashSemaphore, (TickType_t) 20);
+
+        
+        registerTalk::ledOff(this->busptr);
+
+        digitalWrite(DEBUG_LED, LOW);
        
         //registerTalk::ledOff(this->busptr); 
     }
@@ -185,6 +198,10 @@ namespace strobeLED
 
         digitalRead(RED_INT) ?  xSemaphoreGiveFromISR(redLED.onFlashSemaphore, NULL) : xSemaphoreGiveFromISR(redLED.offFlashSemaphore,NULL);
         
+        // digitalRead(RED_INT) ?  digitalWrite(DEBUG_LED, HIGH) : digitalWrite(DEBUG_LED, LOW);
+        
+        // digitalRead(RED_INT) ? redLED.ledOn = true : redLED.ledOn = false;
+
         // so we know we enter this
     }
 
@@ -198,10 +215,10 @@ namespace strobeLED
     void IRAM_ATTR changeBlueLEDFlash()
     {
         //digitalRead(BLUE_INT) ?  blueLED.trigger() : blueLED.deTrigger();
-        digitalRead(RED_INT) ?  xSemaphoreGiveFromISR(blueLED.onFlashSemaphore, NULL) : xSemaphoreGiveFromISR(blueLED.offFlashSemaphore,NULL);
+        digitalRead(BLUE_INT) ?  xSemaphoreGiveFromISR(blueLED.onFlashSemaphore, NULL) : xSemaphoreGiveFromISR(blueLED.offFlashSemaphore,NULL);
     }
 
-    void changeRedLED()
+    void IRAM_ATTR changeRedLED()
     {
 
         if(digitalRead(RED_INT))
@@ -209,7 +226,7 @@ namespace strobeLED
             // registerTalk::ledControlOn(redLED.busptr, redLED.power);
             // redLED.ledFlyCount++; // increment total number of interactions
             // xSemaphoreGiveFromISR(redLED.ledSemaphore, NULL); //unblock task with this function
-
+            redLED.ledOn = true;
             xSemaphoreGiveFromISR(redLED.onSemaphore, NULL); //unblock task with this function
             xSemaphoreGiveFromISR(redLED.ledSemaphore,NULL); //unblock task with this function
             redLED.ledFlyCount++;
@@ -221,7 +238,7 @@ namespace strobeLED
         }
     }
 
-    void changeBlueLED()
+    void IRAM_ATTR changeBlueLED()
     {
 
         if(digitalRead(BLUE_INT))
@@ -229,6 +246,7 @@ namespace strobeLED
             //registerTalk::ledControlOn(blueLED.busptr, blueLED.power);
             //blueLED.ledFlyCount++;
             //xSemaphoreGiveFromISR(blueLED.ledSemaphore, NULL); //unblock task with this function
+            blueLED.ledOn = true;
             xSemaphoreGiveFromISR(blueLED.onSemaphore, NULL); //unblock task with this function
             xSemaphoreGiveFromISR(blueLED.ledSemaphore, NULL); //unblock task with this function
             blueLED.ledFlyCount++;

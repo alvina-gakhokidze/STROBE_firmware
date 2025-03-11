@@ -1,6 +1,12 @@
 
-#define BLUE_INT 1
-#define RED_INT 2
+#define BLUE_INT 2
+#define RED_INT 1
+
+// #define BLUE_SDA 47
+// #define BLUE_SCL 48
+
+// #define RED_SDA 9
+// #define RED_SCL 10
 
 #define BLUE_SDA 9
 #define BLUE_SCL 10

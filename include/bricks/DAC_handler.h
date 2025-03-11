@@ -36,14 +36,15 @@ namespace registerTalk
 
     int result = DACBus->endTransmission();
 
-    if(result == 0){
-      Serial.println("successful transmission!");
-      return true;
-    }
-    else{
-      Serial.printf("failed transmission %d error \n", result);
-      return false;
-    }
+    // if(result == 0){
+    //   Serial.println("successful transmission!");
+    //   return true;
+    // }
+    // else{
+    //   Serial.printf("failed transmission %d error \n", result);
+    //   return false;
+    // }
+    return true;
   }
 
   /**
@@ -73,29 +74,37 @@ namespace registerTalk
   */
   void setupDAC(TwoWire* DACBus) 
   {
-    writeToDAC(DACBus, DAC_ADDRESS, GEN_CONFIG_REGISTER, GEN_CONFIG_ON_MSB, GEN_CONFIG_ON_LSB );
-    // turn DAC on
-    writeToDAC(DACBus, DAC_ADDRESS, DAC_DATA_REGISTER,   DAC_DATA_OFF,      DAC_DATA_OFF);
+    // writeToDAC(DACBus, DAC_ADDRESS, GEN_CONFIG_REGISTER, GEN_CONFIG_ON_MSB, GEN_CONFIG_ON_LSB );
+    // // turn DAC on
+
+    // Serial.printf("wait\n");
+
+    // writeToDAC(DACBus, DAC_ADDRESS, DAC_DATA_REGISTER,   DAC_DATA_OFF,      DAC_DATA_OFF);
+    // Serial.printf("turning LED off\n");
     // set DAC output to OFF (0b00000000)
-    writeToDAC(DACBus, DAC_ADDRESS, TRIGGER_REGISTER,    SAVE_TO_NVM_MSB,   SAVE_TO_NVM_LSB );
-    writeToDAC(DACBus, DAC_ADDRESS, TRIGGER_REGISTER,    RELOAD_NVM_MSB,    RELOAD_NVM_LSB );
+    // writeToDAC(DACBus, DAC_ADDRESS, TRIGGER_REGISTER,    SAVE_TO_NVM_MSB,   SAVE_TO_NVM_LSB );
+    // writeToDAC(DACBus, DAC_ADDRESS, TRIGGER_REGISTER,    RELOAD_NVM_MSB,    RELOAD_NVM_LSB );
+    writeToDAC(DACBus, DAC_ADDRESS, GEN_CONFIG_REGISTER,   GEN_CONFIG_OFF_MSB,      GEN_CONFIG_OFF_LSB);
   }
 
   bool ledOff(TwoWire* DACBus)
   {
-    return writeToDAC(DACBus, DAC_ADDRESS, DAC_DATA_REGISTER,   DAC_DATA_OFF,      DAC_DATA_OFF);
+    //return writeToDAC(DACBus, DAC_ADDRESS, DAC_DATA_REGISTER,   DAC_DATA_OFF,      DAC_DATA_OFF);
+    return writeToDAC(DACBus, DAC_ADDRESS, GEN_CONFIG_REGISTER,   GEN_CONFIG_OFF_MSB,      GEN_CONFIG_OFF_LSB);
   }
   
   /**
    * @brief turns LED to specific power
    * @param power must be between 0 and 1023 (2^10-1, since DAC has 10-bit resolution)
   */
-  bool ledControlOn(TwoWire* DACBus, unsigned power)
+  bool ledControlOn(TwoWire* DACBus, float power)
   {
+    int powerOfTwo = DAC_5V/(5.0/power);
     // convert number into two bytes (to store a padded 10-bit number) to send to register
-    uint8_t MSB = power >> 6;
-    uint8_t LSB = ( power & 0x3F) << 2;
+    uint8_t MSB = powerOfTwo >> 6;
+    uint8_t LSB = ( powerOfTwo & 0x3F) << 2;
     
+    writeToDAC(DACBus, DAC_ADDRESS, GEN_CONFIG_REGISTER,   GEN_CONFIG_ON_MSB,      GEN_CONFIG_ON_LSB);
     return writeToDAC(DACBus, DAC_ADDRESS, DAC_DATA_REGISTER, MSB, LSB);
   }
 }

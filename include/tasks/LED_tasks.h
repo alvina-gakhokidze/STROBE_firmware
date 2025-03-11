@@ -81,7 +81,7 @@ namespace ledTasks
             }
             if(localLED->offFlashSemaphore != NULL)
             {
-                if( xSemaphoreTake( localLED->offFlashSemaphore, (TickType_t) 5 ) == pdTRUE )
+                if( xSemaphoreTake( localLED->offFlashSemaphore, (TickType_t) 10 ) == pdTRUE )
                 {
                     //registerTalk::ledOff(localLED->busptr);
                     localLED->deTrigger();

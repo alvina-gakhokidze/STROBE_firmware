@@ -142,13 +142,15 @@ namespace strobeLED
         this->ledOn=false;
         //digitalWrite(DEBUG_LED,LOW);
 
-        // xSemaphoreTake(this->onSemaphore, (TickType_t) 20);
-        // xSemaphoreTake(this->onFlashSemaphore, (TickType_t) 20);
-
+       
         
         registerTalk::ledOff(this->busptr);
 
         digitalWrite(DEBUG_LED, LOW);
+
+        xSemaphoreTake(this->onSemaphore, (TickType_t) 20);
+        xSemaphoreTake(this->onFlashSemaphore, (TickType_t) 20);
+
        
         //registerTalk::ledOff(this->busptr); 
     }
@@ -165,7 +167,7 @@ namespace strobeLED
         // redLED.state ? registerTalk::ledControlOn(redLED.busptr, redLED.power) : registerTalk::ledOff(redLED.busptr);
         // redLED.state = !redLED.state;
 
-        redLED.state ? xSemaphoreGiveFromISR(redLED.onSemaphore, NULL) : xSemaphoreGiveFromISR(redLED.offSemaphore,NULL);
+        redLED.state ? xSemaphoreGive(redLED.onSemaphore) : xSemaphoreGive(redLED.offSemaphore);
         //digitalWrite(DEBUG_LED, redLED.state);
         redLED.state = !redLED.state;
 
@@ -181,7 +183,7 @@ namespace strobeLED
         // blueLED.state ? registerTalk::ledControlOn(blueLED.busptr, blueLED.power) : registerTalk::ledOff(blueLED.busptr);
         // blueLED.state = !blueLED.state;
 
-        blueLED.state ? xSemaphoreGiveFromISR(blueLED.onSemaphore, NULL) : xSemaphoreGiveFromISR(blueLED.offSemaphore, NULL);
+        blueLED.state ? xSemaphoreGive(blueLED.onSemaphore) : xSemaphoreGive(blueLED.offSemaphore);
         blueLED.state = !blueLED.state;
     }
 

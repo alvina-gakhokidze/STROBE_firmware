@@ -120,6 +120,10 @@ namespace strobeLED
     */
     void LED::trigger()
     {
+
+        this->state = true; // because it was triggered
+        // so that when redLED calback is called, we enter TRUE
+
         timerAlarmWrite(this->timerHandle, this->period_us, true); // have to write a new alarm each time because the period_us will change
         // OOLVOONOO is it correct to feed the period in microseconds? i dont think so
         timerAlarmEnable(this->timerHandle);
@@ -135,6 +139,8 @@ namespace strobeLED
 
     void LED::deTrigger()
     {
+        this->state = false;
+
         timerAlarmDisable(this->timerHandle);
         xSemaphoreGive(this->ledSemaphore); //unblock task with this function
         // this semaphore wouldn't give when we were doing trigger() for some reason
@@ -150,8 +156,8 @@ namespace strobeLED
 
         digitalWrite(DEBUG_LED, LOW);
 
-        xSemaphoreTake(this->onSemaphore, (TickType_t) 1);
-        xSemaphoreTake(this->onFlashSemaphore, (TickType_t) 1);
+        // xSemaphoreTake(this->onSemaphore, (TickType_t) 1);
+        // xSemaphoreTake(this->onFlashSemaphore, (TickType_t) 1);
        
         //registerTalk::ledOff(this->busptr); 
     }
@@ -199,7 +205,6 @@ namespace strobeLED
     {
         //digitalRead(RED_INT) ?  redLED.trigger() : redLED.deTrigger();
 
-        digitalRead(RED_INT) ? redLED.state = true : redLED.state = false; 
         digitalRead(RED_INT) ?  xSemaphoreGiveFromISR(redLED.onFlashSemaphore, NULL) : xSemaphoreGiveFromISR(redLED.offFlashSemaphore,NULL);
         
         // digitalRead(RED_INT) ?  digitalWrite(DEBUG_LED, HIGH) : digitalWrite(DEBUG_LED, LOW);
@@ -219,7 +224,6 @@ namespace strobeLED
     void IRAM_ATTR changeBlueLEDFlash()
     {
         //digitalRead(BLUE_INT) ?  blueLED.trigger() : blueLED.deTrigger();
-        digitalRead(BLUE_INT) ? blueLED.state = true : blueLED.state = false;
         digitalRead(BLUE_INT) ?  xSemaphoreGiveFromISR(blueLED.onFlashSemaphore, NULL) : xSemaphoreGiveFromISR(blueLED.offFlashSemaphore,NULL);
     }
 

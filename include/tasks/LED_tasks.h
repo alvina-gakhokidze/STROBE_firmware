@@ -44,8 +44,8 @@ namespace ledTasks
             {
                 if( xSemaphoreTake( localLED->onSemaphore, (TickType_t) 0 ) == pdTRUE)
                 {
-                    //digitalWrite(DEBUG_LED, LOW);
                     digitalWrite(DEBUG_LED, HIGH);
+                    
                     
                     registerTalk::ledControlOn(localLED->busptr, localLED->power);
                     
@@ -81,8 +81,10 @@ namespace ledTasks
                     // xSemaphoreGive(localLED->ledSemaphore); //unblock task with this function
                     //localLED->state = true;
                     //digitalWrite(DEBUG_LED, HIGH);
+                    
                     localLED->state = true;
                     localLED->trigger();
+                    xSemaphoreGive(localLED->onSemaphore);
                     
                 }
             }
@@ -93,6 +95,7 @@ namespace ledTasks
                     
                     //localLED->state = false;
                     //registerTalk::ledOff(localLED->busptr);
+                    //digitalWrite(DEBUG_LED, HIGH);
                     localLED->deTrigger();
                     //digitalWrite(DEBUG_LED, LOW);
                     registerTalk::ledOff(localLED->busptr);

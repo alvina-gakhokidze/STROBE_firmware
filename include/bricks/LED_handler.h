@@ -135,7 +135,7 @@ namespace strobeLED
         this->ledFlyCount++;
         //digitalWrite(DEBUG_LED,HIGH); 
         
-        this->ledOn = true;
+        //this->ledOn = true;
         
         
     }
@@ -150,7 +150,7 @@ namespace strobeLED
        
         xSemaphoreGive(this->offSemaphore);
 
-        this->ledOn=false;
+        //this->ledOn=false;
         //digitalWrite(DEBUG_LED,LOW);
 
        
@@ -240,7 +240,7 @@ namespace strobeLED
             // registerTalk::ledControlOn(redLED.busptr, redLED.power);
             // redLED.ledFlyCount++; // increment total number of interactions
             // xSemaphoreGiveFromISR(redLED.ledSemaphore, NULL); //unblock task with this function
-            redLED.ledOn = true;
+            //redLED.ledOn = true;
             xSemaphoreGiveFromISR(redLED.onSemaphore, NULL); //unblock task with this function
             xSemaphoreGiveFromISR(redLED.ledSemaphore,NULL); //unblock task with this function
             redLED.ledFlyCount++;
@@ -260,7 +260,7 @@ namespace strobeLED
             //registerTalk::ledControlOn(blueLED.busptr, blueLED.power);
             //blueLED.ledFlyCount++;
             //xSemaphoreGiveFromISR(blueLED.ledSemaphore, NULL); //unblock task with this function
-            blueLED.ledOn = true;
+            //blueLED.ledOn = true;
             xSemaphoreGiveFromISR(blueLED.onSemaphore, NULL); //unblock task with this function
             xSemaphoreGiveFromISR(blueLED.ledSemaphore, NULL); //unblock task with this function
             blueLED.ledFlyCount++;

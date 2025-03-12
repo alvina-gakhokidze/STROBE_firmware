@@ -76,12 +76,6 @@ namespace ledTasks
                 if( xSemaphoreTake( localLED->onFlashSemaphore, (TickType_t) 0 ) == pdTRUE)
                 {
                     
-                    // registerTalk::ledControlOn(localLED->busptr, localLED->power);
-                    // localLED->ledFlyCount++; // increment total number of interactions
-                    // xSemaphoreGive(localLED->ledSemaphore); //unblock task with this function
-                    //localLED->state = true;
-                    //digitalWrite(DEBUG_LED, HIGH);
-                    
                     localLED->state = true;
                     localLED->trigger();
                     xSemaphoreGive(localLED->onSemaphore);
@@ -93,38 +87,12 @@ namespace ledTasks
                 if( xSemaphoreTake( localLED->offFlashSemaphore, (TickType_t) 0 ) == pdTRUE )
                 {
                     
-                    //localLED->state = false;
-                    //registerTalk::ledOff(localLED->busptr);
-                    //digitalWrite(DEBUG_LED, HIGH);
                     localLED->deTrigger();
                     //digitalWrite(DEBUG_LED, LOW);
-                    registerTalk::ledOff(localLED->busptr);
                     //registerTalk::ledOff(localLED->busptr);
-                    //xSemaphoreGive(localLED->offSemaphore);
-                    
-                // digitalWrite(DEBUG_LED, LOW);
 
                 }
             }
-
-           
-            // if( localLED->ledOn)
-            // {
-            //     // registerTalk::ledControlOn(localLED->busptr, localLED->power);
-            //     // localLED->ledFlyCount++; // increment total number of interactions
-            //     // xSemaphoreGive(localLED->ledSemaphore); //unblock task with this function
-            //     localLED->trigger();
-            // }
-            // else
-            // {
-            //     //registerTalk::ledOff(localLED->busptr);
-            //     localLED->deTrigger();
-            //     //registerTalk::ledOff(localLED->busptr);
-            //     //xSemaphoreGive(localLED->offSemaphore);
-                
-            // // digitalWrite(DEBUG_LED, LOW);
-
-            // }
         
             
         }

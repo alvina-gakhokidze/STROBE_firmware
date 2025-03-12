@@ -39,23 +39,25 @@ namespace ledTasks
         for(;;)
         {
             // first we TAKE semaphore
-            if(localLED->ledOn)
+            
+            if(localLED->onSemaphore != NULL)
             {
-                if(localLED->onSemaphore != NULL)
+                if( xSemaphoreTake( localLED->onSemaphore, (TickType_t) 0 ) == pdTRUE)
                 {
-                    if( xSemaphoreTake( localLED->onSemaphore, (TickType_t) 1 ) == pdTRUE)
-                    {
-                        registerTalk::ledControlOn(localLED->busptr, localLED->power);
-                        digitalWrite(DEBUG_LED, HIGH);
-                    }
+                    digitalWrite(DEBUG_LED, HIGH);
+                    
+                    
+                    registerTalk::ledControlOn(localLED->busptr, localLED->power);
+                    
                 }
             }
             if(localLED->offSemaphore != NULL)
             {
                 if( xSemaphoreTake( localLED->offSemaphore, (TickType_t) 1 ) == pdTRUE )
                 {
-                    registerTalk::ledOff(localLED->busptr);
                     digitalWrite(DEBUG_LED, LOW);
+                    registerTalk::ledOff(localLED->busptr);
+                    
                 }
             }
                  
@@ -71,20 +73,32 @@ namespace ledTasks
             // first we TAKE semaphore
             if(localLED->onFlashSemaphore != NULL)
             {
-                if( xSemaphoreTake( localLED->onFlashSemaphore, (TickType_t) 5 ) == pdTRUE)
+                if( xSemaphoreTake( localLED->onFlashSemaphore, (TickType_t) 0 ) == pdTRUE)
                 {
+                    
                     // registerTalk::ledControlOn(localLED->busptr, localLED->power);
                     // localLED->ledFlyCount++; // increment total number of interactions
                     // xSemaphoreGive(localLED->ledSemaphore); //unblock task with this function
+                    //localLED->state = true;
+                    //digitalWrite(DEBUG_LED, HIGH);
+                    
+                    localLED->state = true;
                     localLED->trigger();
+                    xSemaphoreGive(localLED->onSemaphore);
+                    
                 }
             }
             if(localLED->offFlashSemaphore != NULL)
             {
-                if( xSemaphoreTake( localLED->offFlashSemaphore, (TickType_t) 10 ) == pdTRUE )
+                if( xSemaphoreTake( localLED->offFlashSemaphore, (TickType_t) 0 ) == pdTRUE )
                 {
+                    
+                    //localLED->state = false;
                     //registerTalk::ledOff(localLED->busptr);
+                    //digitalWrite(DEBUG_LED, HIGH);
                     localLED->deTrigger();
+                    //digitalWrite(DEBUG_LED, LOW);
+                    registerTalk::ledOff(localLED->busptr);
                     //registerTalk::ledOff(localLED->busptr);
                     //xSemaphoreGive(localLED->offSemaphore);
                     

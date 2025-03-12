@@ -11,6 +11,9 @@ void setup()
 
     Serial.begin(115200);
 
+    pinMode(DEBUG_LED, OUTPUT);
+    digitalWrite(DEBUG_LED, LOW);
+
     Serial.println("hello world");
 
     if( boardTasks::determineUserOrEEPROM() )
@@ -56,6 +59,59 @@ void setup()
 
         // nothing more needed actually
         Serial.printf("Manual Mode chosen\n"); 
+
+        if(boardTasks::thisBoard.redLEDOn)
+        {
+            xTaskCreatePinnedToCore(
+                ledTasks::toggleLED,      // Function that should be called
+                "Toggling red LED",             // Name of the task (for debugging)
+                5000,                            // Stack size (bytes)
+                &strobeLED::redLED,                           // Parameter to pass
+                7,                               // Task priority
+                &TaskHandlers::redLEDToggle, // Task handle
+                1                                // Pin to core 0
+            );
+
+            if(strobeLED::redLED.flashingEnabled)
+            {
+                xTaskCreatePinnedToCore(
+                    ledTasks::flashLED,      // Function that should be called
+                    "Flashing red LED",             // Name of the task (for debugging)
+                    5000,                            // Stack size (bytes)
+                    &strobeLED::redLED,                           // Parameter to pass
+                    7,                               // Task priority
+                    &TaskHandlers::redLEDFlash, // Task handle
+                    1                                // Pin to core 0
+                );
+            }
+            
+        }
+        if(boardTasks::thisBoard.blueLEDOn)
+        {
+            xTaskCreatePinnedToCore(
+                ledTasks::toggleLED,      // Function that should be called
+                "Toggling blue LED",             // Name of the task (for debugging)
+                5000,                            // Stack size (bytes)
+                &strobeLED::blueLED,                           // Parameter to pass
+                7,                               // Task priority
+                &TaskHandlers::blueLEDToggle, // Task handle
+                1                                // Pin to core 0
+            );
+
+            if(strobeLED::blueLED.flashingEnabled)
+            {
+                xTaskCreatePinnedToCore(
+                    ledTasks::flashLED,      // Function that should be called
+                    "Flashing blue LED",             // Name of the task (for debugging)
+                    5000,                            // Stack size (bytes)
+                    &strobeLED::blueLED,                           // Parameter to pass
+                    7,                               // Task priority
+                    &TaskHandlers::blueLEDFlash, // Task handle
+                    1                                // Pin to core 0
+                );
+            }
+            
+        }
     }
     else
     {

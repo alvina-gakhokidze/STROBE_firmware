@@ -24,8 +24,11 @@ namespace strobeLED
 
 
 
-    void IRAM_ATTR redLEDOnCallback();
-    void IRAM_ATTR blueLEDOnCallback();
+    // void IRAM_ATTR redLEDOnCallback();
+    // void IRAM_ATTR blueLEDOnCallback();
+
+    void redLEDOnCallback(TimerHandle_t xhandle);
+    void blueLEDOnCallback(TimerHandle_t xhandle);
 
 
     class LED
@@ -34,11 +37,13 @@ namespace strobeLED
 
             int timerNum;
             int gpio;
-            void (*interruptFunction)(void); // not entirely sure that this will work but let's give it a try
+            //void (*interruptFunction)(void); // not entirely sure that this will work but let's give it a try
+            TimerCallbackFunction_t interruptFunction;
             void attachTimer();
         
         public:
-            hw_timer_t* timerHandle;
+            //hw_timer_t* timerHandle;
+            TimerHandle_t timerHandle; 
             TwoWire* busptr;
             volatile float period_us; // stores flashing frequency
             volatile float power;    // stores power 
@@ -89,7 +94,8 @@ namespace strobeLED
         this->period_us = period_us;
         this->power = power;
         this->state = state;
-        this->timerHandle = timerBegin(this->timerNum, 80, true);
+        //this->timerHandle = timerBegin(this->timerNum, 80, true);
+        this->timerHandle = NULL;
         this->ledSemaphore = xSemaphoreCreateBinary();
         this->onSemaphore = xSemaphoreCreateBinary();
         this->offSemaphore = xSemaphoreCreateBinary();
@@ -103,8 +109,10 @@ namespace strobeLED
     */
     void LED::cancel()
     {
-        timerEnd(this->timerHandle); // do we ever actually need to do this?
+        //timerEnd(this->timerHandle); // do we ever actually need to do this?
         //registerTalk::ledOff(this->busptr);
+        xTimerStop(this->timerHandle, (TickType_t) 10);
+        xTimerDelete(this->timerHandle, (TickType_t) 10);
     }
     
     /**
@@ -112,7 +120,9 @@ namespace strobeLED
     */
     void LED::attachTimer()
     {
-        timerAttachInterrupt(this->timerHandle, this->interruptFunction, true);
+        // timerAttachInterrupt(this->timerHandle, this->interruptFunction, true);
+        this->timerHandle = xTimerCreate("redLED", pdMS_TO_TICKS(this->period_us/1000.0), pdTRUE, nullptr, this->interruptFunction);
+        
     }
     
    /**
@@ -125,11 +135,13 @@ namespace strobeLED
         // so that when redLED calback is called, we enter TRUE
 
         //digitalWrite(DEBUG_LED,HIGH);
-
+        float period_ms = this->period_us / 1000.0;
+        xTimerChangePeriod(this->timerHandle, pdMS_TO_TICKS(period_ms), (TickType_t) 10);
+        xTimerStart(this->timerHandle, (TickType_t) 10);
         
-        timerAlarmWrite(this->timerHandle, this->period_us, true); // have to write a new alarm each time because the period_us will change
-        // OOLVOONOO is it correct to feed the period in microseconds? i dont think so
-        timerAlarmEnable(this->timerHandle);
+        // timerAlarmWrite(this->timerHandle, this->period_us, true); // have to write a new alarm each time because the period_us will change
+        // // OOLVOONOO is it correct to feed the period in microseconds? i dont think so
+        // timerAlarmEnable(this->timerHandle);
         
         
         xSemaphoreGive(this->onSemaphore);
@@ -146,7 +158,8 @@ namespace strobeLED
     {
         //this->state = false;
 
-        timerAlarmDisable(this->timerHandle);
+        xTimerStop(this->timerHandle, (TickType_t) 3);
+        //timerAlarmDisable(this->timerHandle);
         xSemaphoreGive(this->ledSemaphore); //unblock task with this function
         // this semaphore wouldn't give when we were doing trigger() for some reason
        
@@ -174,7 +187,7 @@ namespace strobeLED
     /**
      * @brief callback function for turning red LED on/off with timer
     */
-    void redLEDOnCallback()
+    void redLEDOnCallback(TimerHandle_t xhandle)
     {
         // redLED.state ? registerTalk::ledControlOn(redLED.busptr, redLED.power) : registerTalk::ledOff(redLED.busptr);
         // redLED.state = !redLED.state;
@@ -192,7 +205,7 @@ namespace strobeLED
     /**
      * @brief callback function for turning blue LED on/off with timer
     */
-    void blueLEDOnCallback()
+    void blueLEDOnCallback(TimerHandle_t xhandle)
     {
         // blueLED.state ? registerTalk::ledControlOn(blueLED.busptr, blueLED.power) : registerTalk::ledOff(blueLED.busptr);
         // blueLED.state = !blueLED.state;

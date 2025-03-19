@@ -52,6 +52,8 @@ namespace boardTasks
     char blueLEDPeriodString[] = "blueLEDPeriod";
     char powerString[] = "power";
     char frequencyString[] = "frequency";
+    char redLEDFlashingEnabledString[] = "rLEDfEnabled";
+    char blueLEDFlashingEnabledString[] = "bLEDfEnabled";
 
     
 
@@ -429,6 +431,9 @@ namespace boardTasks
         saveToPermanentMemoryBool(&permanentMemory, powerOnString, thisBoard.powerOn);
         saveToPermanentMemoryBool(&permanentMemory, frequencyOnString, thisBoard.frequencyOn);
         saveToPermanentMemoryBool(&permanentMemory, manualModeString, thisBoard.manualMode);
+
+        saveToPermanentMemoryBool(&permanentMemory, redLEDFlashingEnabledString, strobeLED::redLED.flashingEnabled);
+        saveToPermanentMemoryBool(&permanentMemory, blueLEDFlashingEnabledString, strobeLED::blueLED.flashingEnabled);
         
         //LED power and frequency values
         saveToPermanentMemoryFloat(&permanentMemory, redLEDPowerString, strobeLED::redLED.power);
@@ -436,6 +441,7 @@ namespace boardTasks
 
         saveToPermanentMemoryFloat(&permanentMemory, blueLEDPowerString, strobeLED::blueLED.power);
         saveToPermanentMemoryFloat(&permanentMemory, blueLEDPeriodString, strobeLED::blueLED.period_us);
+
     }
 
     void loadBoardConfigs()
@@ -462,6 +468,31 @@ namespace boardTasks
         if(thisBoard.manualMode)
         {
             Serial.printf("Manual mode on.\n");
+            if(thisBoard.redLEDOn)
+            {
+                strobeLED::redLED.flashingEnabled = getFromPermanentMemoryBool(&permanentMemory, redLEDFlashingEnabledString);
+                if(strobeLED::redLED.flashingEnabled)
+                {
+                    Serial.printf("red led flashing enabled");
+                }
+                else
+                {
+                    Serial.printf("red led flashing disabled");
+                }
+            }
+            if(thisBoard.blueLEDOn)
+            {
+                strobeLED::blueLED.flashingEnabled = getFromPermanentMemoryBool(&permanentMemory, blueLEDFlashingEnabledString);
+                if(strobeLED::blueLED.flashingEnabled)
+                {
+                    Serial.printf("blue led flashing enabled");
+                }
+                else
+                {
+                    Serial.printf("blue led flashing disabled");
+                }
+            }
+                
         }
         else
         {

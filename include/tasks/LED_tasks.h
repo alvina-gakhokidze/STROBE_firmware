@@ -45,7 +45,9 @@ namespace ledTasks
                 if( xSemaphoreTake( localLED->onSemaphore, (TickType_t) 0 ) == pdTRUE)
                 {
                     digitalWrite(DEBUG_LED, HIGH);
+                    
                     registerTalk::ledControlOn(localLED->busptr, localLED->power);
+                    localLED->state = false;
                     
                 }
             }
@@ -54,7 +56,9 @@ namespace ledTasks
                 if( xSemaphoreTake( localLED->offSemaphore, (TickType_t) 1 ) == pdTRUE ) // this has to be set to 1 for delay otherwise LED won't turn on
                 {
                     digitalWrite(DEBUG_LED, LOW);
+                    
                     registerTalk::ledOff(localLED->busptr);
+                    localLED->state = true;
                     
                 }
             }
@@ -74,7 +78,7 @@ namespace ledTasks
                 if( xSemaphoreTake( localLED->onFlashSemaphore, (TickType_t) 0 ) == pdTRUE)
                 {
                     
-                    localLED->state = true;
+                    //localLED->state = true;
                     localLED->trigger();
                     
                     //digitalWrite(DEBUG_LED, HIGH);

@@ -46,11 +46,11 @@ namespace strobeLED
             bool ledOn;
             bool flashingEnabled = true; // default set to true
             volatile unsigned ledFlyCount;
-            SemaphoreHandle_t ledSemaphore = NULL; // hopefully it's overwritten later
-            SemaphoreHandle_t onSemaphore = NULL; // hopefully it's overwritten later
-            SemaphoreHandle_t offSemaphore = NULL; // hopefully it's overwritten later
-            SemaphoreHandle_t onFlashSemaphore = NULL; // hopefully it's overwritten later
-            SemaphoreHandle_t offFlashSemaphore = NULL; // hopefully it's overwritten later
+            volatile SemaphoreHandle_t ledSemaphore = NULL; // hopefully it's overwritten later
+            volatile SemaphoreHandle_t onSemaphore = NULL; // hopefully it's overwritten later
+            volatile SemaphoreHandle_t offSemaphore = NULL; // hopefully it's overwritten later
+            volatile SemaphoreHandle_t onFlashSemaphore = NULL; // hopefully it's overwritten later
+            volatile SemaphoreHandle_t offFlashSemaphore = NULL; // hopefully it's overwritten later
             
             LED(TwoWire* ledptr, float period_us, float power, bool state);
 
@@ -126,11 +126,13 @@ namespace strobeLED
 
         //digitalWrite(DEBUG_LED,HIGH);
 
+        
         timerAlarmWrite(this->timerHandle, this->period_us, true); // have to write a new alarm each time because the period_us will change
         // OOLVOONOO is it correct to feed the period in microseconds? i dont think so
         timerAlarmEnable(this->timerHandle);
         
         
+        xSemaphoreGive(this->onSemaphore);
         // SEMAPHORE TAKE? i dont think so
         this->ledFlyCount++;
         //digitalWrite(DEBUG_LED,HIGH); 
@@ -159,7 +161,7 @@ namespace strobeLED
 
         //digitalWrite(DEBUG_LED, LOW);
 
-        // xSemaphoreTake(this->onSemaphore, (TickType_t) 1);
+        xSemaphoreTake(this->onSemaphore, (TickType_t) 1); // taking remaining semaphore
         // xSemaphoreTake(this->onFlashSemaphore, (TickType_t) 1);
        
         //registerTalk::ledOff(this->busptr); 
@@ -178,6 +180,7 @@ namespace strobeLED
         // redLED.state = !redLED.state;
         //digitalWrite(DEBUG_LED, LOW);
         redLED.state ? xSemaphoreGive(redLED.onSemaphore) : xSemaphoreGive(redLED.offSemaphore);
+        //digitalWrite(DEBUG_LED, redLED.state);
         //digitalWrite(DEBUG_LED, redLED.state);
         redLED.state = !redLED.state;
         

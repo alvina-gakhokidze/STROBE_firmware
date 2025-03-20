@@ -9,27 +9,18 @@ void setup()
 {
     // need to initialize pins 
 
+    unsigned long time1 = millis();
+    while(millis()-time1 < 5000); //wait for 5 seconds before program starts
+
     Serial.begin(115200);
 
     pinMode(DEBUG_LED, OUTPUT);
     digitalWrite(DEBUG_LED, LOW);
 
-    Serial.println("hello world");
-
-    if( boardTasks::determineUserOrEEPROM() )
-    {
-        Serial.printf("Going to setup board\n");
-        boardTasks::setupBoard(); // get user to choose settings
-        Serial.printf("Saving board configs\n");
-        boardTasks::saveBoardConfigs();
-    }
-    else
-    {
-        Serial.printf("Loading board configs\n");
-        boardTasks::setupBoardFromPreviousExperiment(); // load previous experiment values from EEPROM
-    }
-
-    Serial.printf("finished setting up the board\n");
+    while(!boardTasks::initBroadcast());
+    Serial.printf("Waiting for data from user\n");
+    while(!boardTasks::thisBoard.dataReceived);
+    Serial.printf("Received data from user and set up board\n");
     
     xTaskCreatePinnedToCore(
         ledTasks::updateFlyCountTask,      // Function that should be called

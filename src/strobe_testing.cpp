@@ -14,7 +14,13 @@ void setup()
     pinMode(DEBUG_LED, OUTPUT);
     digitalWrite(DEBUG_LED, LOW);
 
-    Serial.println("hello world");
+    Serial.printf("Beggining i2c busses\n");
+    strobeLED::redLEDBus.begin(RED_SDA, RED_SCL, I2C_FREQUENCY);
+    strobeLED::blueLEDBus.begin(BLUE_SDA, BLUE_SCL, I2C_FREQUENCY);
+
+    registerTalk::ledOff(&strobeLED::redLEDBus);
+    registerTalk::ledOff(&strobeLED::blueLEDBus);
+
 
     if( boardTasks::determineUserOrEEPROM() )
     {

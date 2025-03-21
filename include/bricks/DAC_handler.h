@@ -99,11 +99,22 @@ namespace registerTalk
   */
   bool ledControlOn(TwoWire* DACBus, float power)
   {
-    int powerOfTwo = DAC_5V/(5.0/power);
+    int powerOfTwo = (int) ( (float) DAC_5V/(5.0/power) );
     // convert number into two bytes (to store a padded 10-bit number) to send to register
-    uint8_t MSB = powerOfTwo >> 6;
-    uint8_t LSB = ( powerOfTwo & 0x3F) << 2;
+
+    uint16_t ten_bit = (powerOfTwo & 0x3FF);  // Mask with 0x3FF to ensure it's 10 bits
     
+    uint16_t result = (0xF << 12) | (ten_bit << 2) | 0x3;  // Set 1111 on the left and 11 on the right
+    
+    byte MSB = (result >> 8) & 0xff;
+    byte LSB = result & 0xff;
+
+    // Serial.print("power: ");
+    // Serial.println(int(MSB << 8 | LSB));
+    // Serial.print("half power: ");
+    // Serial.println(int(DAC_DATA_HALF_POWER_MSB << 8 | DAC_DATA_HALF_POWER_LSB));
+    
+    writeToDAC(DACBus, DAC_ADDRESS, GEN_CONFIG_REGISTER, GEN_CONFIG_OFF_MSB, GEN_CONFIG_OFF_LSB);
     writeToDAC(DACBus, DAC_ADDRESS, GEN_CONFIG_REGISTER,   GEN_CONFIG_ON_MSB,      GEN_CONFIG_ON_LSB);
     return writeToDAC(DACBus, DAC_ADDRESS, DAC_DATA_REGISTER, MSB, LSB);
   }

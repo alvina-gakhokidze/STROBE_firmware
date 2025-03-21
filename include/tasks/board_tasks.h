@@ -540,9 +540,6 @@ namespace boardTasks
     */
    void setupLEDs()
    {
-       Serial.printf("Beggining i2c busses\n");
-       strobeLED::redLEDBus.begin(RED_SDA, RED_SCL, I2C_FREQUENCY);
-       strobeLED::blueLEDBus.begin(BLUE_SDA, BLUE_SCL, I2C_FREQUENCY);
 
        if(boardTasks::thisBoard.redLEDOn)
        {

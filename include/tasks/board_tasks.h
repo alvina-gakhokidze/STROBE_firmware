@@ -15,6 +15,7 @@ namespace boardTasks
     Preferences permanentMemory; // will be used to store wifi data, and also red and blue LED configs
 
     typedef struct boardParameters{
+        bool dataReceived;
         bool redLEDOn;
         bool blueLEDOn;
         bool powerOn;
@@ -22,7 +23,29 @@ namespace boardTasks
         bool manualMode;
     } boardParameters; 
 
-    boardParameters thisBoard = {false, false, false, false, true};
+    typedef struct wifiBoardParams {
+        bool redLEDOn;
+        bool blueLEDOn;
+        bool manualMode;
+        bool powerOn;
+        bool frequencyOn;
+        float redLEDFrequency;
+        float redLEDPower;
+        float blueLEDFrequency;
+        float blueLEDPower;
+    } wifiBoardParams;
+
+    wifiBoardParams wifiData;
+
+
+    boardParameters thisBoard = { 
+            false, //dataReceived
+            false, //redLEDOn
+            false, //blueLEDOn
+            false, //powerOn
+            false, //frequencyOn
+            true   //manualMode
+        };
 
     void setupBoardForParameterOptimization();
     void setupLEDsForManualOperation(strobeLED::LED* ledObject , float period_us, float power);
@@ -38,6 +61,8 @@ namespace boardTasks
     void saveBoardConfigs();
     void loadBoardConfigs();
     void setupLEDs();
+    void setupBoardWifi(const uint8_t * mac, const uint8_t *inData, int len);
+    bool stopBoard();
 
 
     char redLEDOnString[] = "redLEDOn";
@@ -68,6 +93,7 @@ namespace boardTasks
         Serial.printf("Setting up DACs\n");
         registerTalk::setupDAC(&strobeLED::redLEDBus);
         registerTalk::setupDAC(&strobeLED::blueLEDBus);
+        Serial.printf("finished setting up DACs\n");
     }
 
     /**
@@ -548,12 +574,12 @@ namespace boardTasks
            if(strobeLED::redLED.flashingEnabled)
            {
                 Serial.printf("Attaching interrupt for red LED \n");
-                attachInterrupt(RED_INT, &strobeLED::changeRedLEDFlash, CHANGE);
+                attachInterrupt(digitalPinToInterrupt(RED_INT), &strobeLED::changeRedLEDFlash, CHANGE);
            }
            else
            {
                Serial.printf("no flashing for red LED\n");
-               attachInterrupt(RED_INT, &strobeLED::changeRedLED, CHANGE);
+               attachInterrupt(digitalPinToInterrupt(RED_INT), &strobeLED::changeRedLED, CHANGE);
            }
        }
 
@@ -564,12 +590,12 @@ namespace boardTasks
            if(strobeLED::blueLED.flashingEnabled)
            {
                 Serial.printf("Attaching interrupt for blue LED \n");
-                attachInterrupt(BLUE_INT, &strobeLED::changeBlueLEDFlash, CHANGE);
+                attachInterrupt(digitalPinToInterrupt(BLUE_INT), &strobeLED::changeBlueLEDFlash, CHANGE);
            }
            else
            {
                Serial.printf("no flashing for blue LED");
-               attachInterrupt(BLUE_INT, &strobeLED::changeBlueLED, CHANGE);
+               attachInterrupt(digitalPinToInterrupt(BLUE_INT), &strobeLED::changeBlueLED, CHANGE);
            }
 
        }
@@ -580,5 +606,180 @@ namespace boardTasks
         boardTasks::loadBoardConfigs();
         setupPeripherals();
    }
+
+   bool initBroadcast()
+   {
+        //Set device as a Wi-Fi Station
+        WiFi.mode(WIFI_STA);
+
+        //Init ESP-NOW
+        if (esp_now_init() != ESP_OK) 
+        {
+            Serial.println("Error initializing ESP-NOW");
+            return false;
+        }
+
+        esp_now_register_recv_cb(esp_now_recv_cb_t(setupBoardWifi)); // funtion to start monitoring for input
+
+        return true;
+   }
+
+   bool stopBoard()
+   {
+        //assume manual mode for now
+
+        // we need to clear the fly counts
+
+        //we need to clear the semaphores
+
+        // and we need to turn the LEDs off
+
+        Serial.printf("Stopping board!\n");
+
+        if(thisBoard.manualMode)
+        {
+            Serial.printf("Detaching interrupts\n");
+            if(thisBoard.redLEDOn)
+            {
+                detachInterrupt(digitalPinToInterrupt(RED_INT));
+                strobeLED::redLED.ledFlyCount = 0;
+                strobeLED::redLEDFlyCount = 0;
+                xSemaphoreTake(strobeLED::redLED.onFlashSemaphore, (TickType_t) 20);
+                xSemaphoreTake(strobeLED::redLED.onSemaphore, (TickType_t) 20);
+                xSemaphoreTake(strobeLED::redLED.offFlashSemaphore, (TickType_t) 20);
+                xSemaphoreTake(strobeLED::redLED.offSemaphore, (TickType_t) 20);
+    
+            }
+            if(thisBoard.blueLEDOn)
+            {
+                detachInterrupt(digitalPinToInterrupt(BLUE_INT));
+                strobeLED::blueLED.ledFlyCount = 0;
+                strobeLED::blueLEDFlyCount = 0;
+
+                xSemaphoreTake(strobeLED::blueLED.onFlashSemaphore, (TickType_t) 20);
+                xSemaphoreTake(strobeLED::blueLED.onSemaphore, (TickType_t) 20);
+                xSemaphoreTake(strobeLED::blueLED.offFlashSemaphore, (TickType_t) 20);
+                xSemaphoreTake(strobeLED::blueLED.offSemaphore, (TickType_t) 20);
+            }
+           
+          
+            
+
+            registerTalk::ledOff(strobeLED::redLED.busptr);
+            registerTalk::ledOff(strobeLED::blueLED.busptr);
+
+            return true;
+        }
+
+        return true;
+   }
+
+    void setupBoardWifi(const uint8_t * mac, const uint8_t *inData, int len)
+    {
+
+        Serial.printf("Welcome to the new STROBE!\n");
+
+        memcpy(&wifiData, inData, sizeof(wifiData));
+
+        if(thisBoard.dataReceived) // checking to see if we've uploaded data before
+        {
+            stopBoard(); // resetting values before continuing
+        }
+        else
+        {
+            Serial.printf("Beggining i2c busses\n");
+            strobeLED::redLEDBus.begin(RED_SDA, RED_SCL, I2C_FREQUENCY);
+            strobeLED::blueLEDBus.begin(BLUE_SDA, BLUE_SCL, I2C_FREQUENCY);     
+        }
+
+        thisBoard.dataReceived = true;
+
+
+        thisBoard.manualMode = wifiData.manualMode;
+
+        if(thisBoard.manualMode)
+        {
+            Serial.printf("Manual Mode Enabled\n");
+            thisBoard.redLEDOn = wifiData.redLEDOn;
+            thisBoard.blueLEDOn = wifiData.blueLEDOn;
+
+            if(thisBoard.redLEDOn)
+            {
+                Serial.printf("Red LED Enabled\n");
+                strobeLED::redLED.power = wifiData.redLEDPower / 1000.0 * POWER_RESISTOR_VALUE;
+                if(wifiData.redLEDFrequency == 0)
+                {
+                    strobeLED::redLED.flashingEnabled = false;
+                    strobeLED::redLED.period_us = 0;
+                }
+                else{
+                    strobeLED::redLED.flashingEnabled = true;
+                    strobeLED::redLED.period_us = ( 1.0 / wifiData.redLEDFrequency  ) * 1000000.0;
+                }
+                Serial.printf("Red LED Power: %lf, Red LED Period: %lf\n", strobeLED::redLED.power, strobeLED::redLED.period_us); 
+            }
+            if(thisBoard.blueLEDOn)
+            {
+                Serial.printf("Blue LED Enabled\n");
+                strobeLED::blueLED.power = wifiData.blueLEDPower  / 1000.0 * POWER_RESISTOR_VALUE;
+                if(wifiData.blueLEDFrequency == 0)
+                {
+                    strobeLED::blueLED.flashingEnabled = false;
+                    strobeLED::blueLED.period_us = 0;
+                }
+                else
+                {
+                    strobeLED::blueLED.flashingEnabled = true;
+                    strobeLED::blueLED.period_us = ( 1.0 / wifiData.blueLEDFrequency  ) * 1000000.0; 
+                }
+                Serial.printf("Blue LED Power: %lf, Blue LED Period: %lf\n", strobeLED::blueLED.power, strobeLED::blueLED.period_us); 
+            }
+            Serial.printf("Now setting up peripherals\n");
+            setupPeripherals();
+        }
+        else
+        {
+            Serial.printf("Parameter Optimization Mode Enabled\n");
+            thisBoard.powerOn = wifiData.powerOn;
+            thisBoard.frequencyOn = wifiData.frequencyOn;
+
+            if(thisBoard.powerOn && thisBoard.frequencyOn)
+            {
+                Serial.printf("Both power and frequency being optimized\n");
+            }
+            else if(thisBoard.powerOn)
+            {
+                Serial.printf("Only power being optimized\n");
+
+                if(thisBoard.redLEDOn)
+                {
+                    strobeLED::redLED.period_us = ( 1.0 / wifiData.redLEDFrequency  ) * 1000000.0;
+                    Serial.printf("Red LED Period: %lf\n", strobeLED::redLED.period_us); 
+                }
+                if(thisBoard.blueLEDOn)
+                {
+                    strobeLED::blueLED.period_us = ( 1.0 / wifiData.blueLEDFrequency  ) * 1000000.0;
+                    Serial.printf("Blue LED Period: %lf\n", strobeLED::blueLED.period_us); 
+                }
+            }
+            else if(thisBoard.frequencyOn)
+            {
+                Serial.printf("Only frequency being optimized\n");
+
+                if(thisBoard.redLEDOn)
+                {
+                    strobeLED::redLED.power = wifiData.redLEDPower / 1000.0 * POWER_RESISTOR_VALUE;
+                    Serial.printf("Red LED Power: %lf\n", strobeLED::redLED.power); 
+                }
+                if(thisBoard.blueLEDOn)
+                {
+                    strobeLED::blueLED.power = wifiData.blueLEDPower / 1000.0 * POWER_RESISTOR_VALUE;
+                    Serial.printf("Blue LED Power: %lf\n", strobeLED::blueLED.power); 
+                }
+            }
+            Serial.printf("Now setting up board for parameter optimization\n");
+            setupBoardForParameterOptimization();
+        }
+    }
 
 }

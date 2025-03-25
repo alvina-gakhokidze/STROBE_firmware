@@ -17,25 +17,17 @@ void setup()
     Serial.printf("Beggining i2c busses\n");
     strobeLED::redLEDBus.begin(RED_SDA, RED_SCL, I2C_FREQUENCY);
     strobeLED::blueLEDBus.begin(BLUE_SDA, BLUE_SCL, I2C_FREQUENCY);
+    //gpio_install_isr_service(ESP_INTR_FLAG_LEVEL6); // higher flag number, higher priority
 
     registerTalk::ledOff(&strobeLED::redLEDBus);
     registerTalk::ledOff(&strobeLED::blueLEDBus);
 
 
-    if( boardTasks::determineUserOrEEPROM() )
-    {
-        Serial.printf("Going to setup board\n");
-        boardTasks::setupBoard(); // get user to choose settings
-        Serial.printf("Saving board configs\n");
-        boardTasks::saveBoardConfigs();
+    while(!boardTasks::initBroadcast());
+    Serial.printf("Waiting for data from user\n");
+    while(!boardTasks::thisBoard.dataReceived){
+       Serial.println(boardTasks::thisBoard.dataReceived);
     }
-    else
-    {
-        Serial.printf("Loading board configs\n");
-        boardTasks::setupBoardFromPreviousExperiment(); // load previous experiment values from EEPROM
-    }
-
-    Serial.printf("finished setting up the board\n");
     
     xTaskCreatePinnedToCore(
         ledTasks::updateFlyCountTask,      // Function that should be called

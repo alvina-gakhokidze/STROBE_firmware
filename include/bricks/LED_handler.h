@@ -181,8 +181,8 @@ namespace strobeLED
     }
 
 
-    LED redLED(&redLEDBus, DAFAULT_LOW_PERIOD_US, 1, true); //OOLVOONOO set initial period to something really large
-    LED blueLED(&blueLEDBus, DAFAULT_LOW_PERIOD_US, 1, true); //OOLVOONOO set initial period to something really large
+    LED redLED(&redLEDBus, DEFAULT_LOW_PERIOD_US, 1, true); //OOLVOONOO set initial period to something really large
+    LED blueLED(&blueLEDBus, DEFAULT_LOW_PERIOD_US, 1, true); //OOLVOONOO set initial period to something really large
 
     /**
      * @brief callback function for turning red LED on/off with timer

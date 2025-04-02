@@ -685,12 +685,9 @@ namespace boardTasks
         {
             stopBoard(); // resetting values before continuing
         }
-        else
-        {
-            Serial.printf("Beggining i2c busses\n");
-            strobeLED::redLEDBus.begin(RED_SDA, RED_SCL, I2C_FREQUENCY);
-            strobeLED::blueLEDBus.begin(BLUE_SDA, BLUE_SCL, I2C_FREQUENCY);     
-        }
+
+        registerTalk::ledOff(&strobeLED::redLEDBus);
+        registerTalk::ledOff(&strobeLED::blueLEDBus);
 
         thisBoard.dataReceived = true;
 

@@ -1,3 +1,8 @@
+/**
+ * This file implements the high pass filters that are used to a) take the derivative of the bite count data, and b) filter the derivatives before sending them to the extremum seeking controller
+ */
+
+
 #pragma once
 #include <bricks/Smoothing_handler.h>
 #include <bricks/Derivative_handler.h>
@@ -44,7 +49,6 @@ namespace filterTasks
        
         for(;;)
         {
-            //vTaskDelay((TickType_t) 200); OOLVOONOO DO I NEED THIS??
             
             if(localFilter->q_size >= MOVING_AVERAGE_FILTER_DEPTH)
             {
@@ -71,8 +75,6 @@ namespace filterTasks
     */
     void finiteDifferenceDerivative(void* filterStruct)
     {
-        // maybe we have a semaphore here
-        // and when the queue gives it, that means we have most recent average
 
         filterParams* localFilters = (filterParams*) filterStruct;
         dataSmoother::movingAverageFilter* maFilter = localFilters->movingAverage;
@@ -90,16 +92,11 @@ namespace filterTasks
                     
                     hpFilter->decrementQueue(); // queue is full from beginning, full of 0s
                     hpFilter->incrementQueue(newDerivative); // since we always remove 1 element first, there will always be one empty when we increment
-                    //Serial.printf("%d. old: %lf new: %lf new fdd: %lf old fdd: %lf, added succesfully: %d\n", fCounter, maFilter->oldMovingBiteAverage, maFilter->newMovingBiteAverage, newDerivative, oldDev, added);
                     xSemaphoreGive(hpFilter->highpassSemaphore);
                 }
             }
-            //printf("stack size of fdd: %d\n", uxTaskGetStackHighWaterMark(NULL));
         }
     }
-
-    // this is actually a high pass filter that is dependent on the loop... so to generalize this task, 
-    // we should actually not hard code the hard pass filter
 
     void highPassFilterTask(void* filter)
     {
@@ -134,7 +131,6 @@ namespace filterTasks
                 }
             }
             
-            //printf("stack size of high pass: %d\n", uxTaskGetStackHighWaterMark(NULL));
             vTaskDelay((TickType_t) 5); // would adding task delay fix the guru error?
         }
 

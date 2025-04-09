@@ -1,18 +1,24 @@
+/**
+ * This file takes care of converting user input to correct values, saving them to the correct objects, and setting up the board peripherals for operation
+ */
+
+
 #pragma once
 #include <configs/SYSTEM_config.h>
-
 #include <bricks/DAC_handler.h>
 #include <bricks/Derivative_handler.h>
 #include <bricks/ESC_handler.h>
 #include <bricks/LED_handler.h>
 #include <bricks/Smoothing_handler.h>
 #include <tasks/PESC_tasks.h>
+#include <tasks/LED_tasks.h>
 
 
 namespace boardTasks
 {
 
-    Preferences permanentMemory; // will be used to store wifi data, and also red and blue LED configs
+    Preferences permanentMemory; // this is used when we want to write to permanent memory. 
+    // OBSOLETE thanks to wifi/broadcast feature
 
     typedef struct boardParameters{
         bool dataReceived;
@@ -48,7 +54,8 @@ namespace boardTasks
         };
 
     void setupBoardForParameterOptimization();
-    void setupLEDsForManualOperation(strobeLED::LED* ledObject , float period_us, float power);
+    void setLEDFrequency(strobeLED::LED* ledObject, float ledFrequency);
+    void setLEDPower(strobeLED::LED* ledObject, float ledCurrent);
     void setupBoard();
     int getUserInput(int numOptions, const char* programQuestion);
     float getUserFloatInput(const char* programQuestion, float lowLimit, float upLimit );
@@ -63,6 +70,7 @@ namespace boardTasks
     void setupLEDs();
     void setupBoardWifi(const uint8_t * mac, const uint8_t *inData, int len);
     bool stopBoard();
+    void createTasks();
 
 
     char redLEDOnString[] = "redLEDOn";
@@ -101,8 +109,6 @@ namespace boardTasks
      */
     void setupBoardForParameterOptimization()
     {
-        // need a mode for enabling only certain LEDs
-
         Serial.printf("Setting up board for parameter optimization\n");
 
         if(thisBoard.redLEDOn)
@@ -134,19 +140,25 @@ namespace boardTasks
     }
 
     /**
-     * @brief enables board operation for manually-chosen power and frequency
+     * @brief convers frequency to period for timer
      */
-    void setupLEDsForManualOperation(strobeLED::LED* ledObject , float period_us, float power)
+    void setLEDFrequency(strobeLED::LED* ledObject, float ledFrequency)
     {
-        ledObject->period_us = period_us;
-        ledObject->power = power;
+        ledObject->period_us = ( 1.0 / (ledFrequency)  ) * 0.5 * 1000000.0;
+    }
 
-        setupPeripherals();
+    /**
+     * @brief converts current to voltage that needs to be applied across 5 ohm power resistor
+     */
+    void setLEDPower(strobeLED::LED* ledObject, float ledCurrent)
+    {
+        ledObject->power = ledCurrent / 1000.0 * POWER_RESISTOR_VALUE;
     }
 
 
     /**
      * @brief determines which LEDs user wants to use, and what mode (manual/optimization)
+     * OBSOLETE thanks to wifi/broadcast feature
      */
     void setupBoard()
     {
@@ -276,6 +288,7 @@ namespace boardTasks
 
     /**
      * @brief read Serial input from user, keep asking until valid option chosen
+     * OBSOLETE thanks to wifi/broadcast feature
      */
     int getUserInput(int numOptions, const char* programQuestion)
     {
@@ -306,6 +319,7 @@ namespace boardTasks
 
     /** 
      * @brief function that gets float input, and ensures it's within limits, otherwise prompts user to try again
+     * OBSOLETE thanks to wifi/broadcast feature
      */
     float getUserFloatInput(const char* programQuestion, float lowLimit, float upLimit )
     {
@@ -329,13 +343,12 @@ namespace boardTasks
             }
         }
 
-        //exit once valid option has been chosen
-
         return userInput;
     }
 
     /**
      * @brief function that prompts user to provide LED current and LED frequency for manual operation
+     * OBSOLETE thanks to wifi/broadcast feature
      */
     void calibrateLED(strobeLED::LED* localLED, char* mode)
     {
@@ -383,6 +396,7 @@ namespace boardTasks
      * @brief if no input from user, we will load 
      * @return true if specifiying new parameters, false if we want to load old ones
      * tip: do not press enter after providing input!
+     * OBSOLETE thanks to wifi/broadcast feature
      */
     bool determineUserOrEEPROM()
     {
@@ -414,6 +428,7 @@ namespace boardTasks
 
     /**
      * @brief save the values to permanent memory so that upon restart we don't need user input again
+     * OBSOLETE thanks to wifi/broadcast feature
      */
     void saveToPermanentMemoryBool(Preferences* memory, char* keyName, bool keyVal)
     {
@@ -447,6 +462,10 @@ namespace boardTasks
         return val;
     }
 
+    /**
+     * @brief saves board configs to permenent memory so they can be reloaded later if needed
+     * OBSOLETE thanks to wifi/broadcast feature
+     */
     void saveBoardConfigs()
     {
         //the keyNames are limited to 15 chars
@@ -470,6 +489,10 @@ namespace boardTasks
 
     }
 
+    /**
+     * @brief if no user input given for 10 seconds, assume we will just use conditions of previous experiment
+     * OBSOLETE thanks to wifi/broadcast feature
+     */
     void loadBoardConfigs()
     {
         thisBoard.redLEDOn = getFromPermanentMemoryBool(&permanentMemory, redLEDOnString);
@@ -601,6 +624,10 @@ namespace boardTasks
        }
    }
 
+   /**
+     * @brief calls setup functions to reload features from previous experiment
+     * OBSOLETE thanks to wifi/broadcast feature
+     */
    void setupBoardFromPreviousExperiment()
    {
         boardTasks::loadBoardConfigs();
@@ -624,23 +651,29 @@ namespace boardTasks
         return true;
    }
 
+      /**
+     * @brief for wifi/broadcast feature - function that is called to stop STROBE operation temporarily before new values can be loaded
+     */
    bool stopBoard()
    {
-        //assume manual mode for now
-
-        // we need to clear the fly counts
-
-        //we need to clear the semaphores
-
-        // and we need to turn the LEDs off
+        //assume manual mode for now 
+        //when parameter optimization implemented, additional code needs to be added this
+        // to delete ESC tasks, etc. and reset the board for new parameters
 
         Serial.printf("Stopping board!\n");
 
         if(thisBoard.manualMode)
         {
+
             Serial.printf("Detaching interrupts\n");
             if(thisBoard.redLEDOn)
             {
+                vTaskDelete(TaskHandlers::redLEDToggle);
+
+                if(strobeLED::redLED.flashingEnabled){
+                    vTaskDelete(TaskHandlers::redLEDFlash);
+                }   
+
                 detachInterrupt(digitalPinToInterrupt(RED_INT));
                 strobeLED::redLED.ledFlyCount = 0;
                 strobeLED::redLEDFlyCount = 0;
@@ -652,6 +685,12 @@ namespace boardTasks
             }
             if(thisBoard.blueLEDOn)
             {
+                vTaskDelete(TaskHandlers::blueLEDToggle);
+
+                if(strobeLED::blueLED.flashingEnabled){
+                    vTaskDelete(TaskHandlers::blueLEDFlash);
+                }   
+
                 detachInterrupt(digitalPinToInterrupt(BLUE_INT));
                 strobeLED::blueLED.ledFlyCount = 0;
                 strobeLED::blueLEDFlyCount = 0;
@@ -662,9 +701,6 @@ namespace boardTasks
                 xSemaphoreTake(strobeLED::blueLED.offSemaphore, (TickType_t) 20);
             }
            
-          
-            
-
             registerTalk::ledOff(strobeLED::redLED.busptr);
             registerTalk::ledOff(strobeLED::blueLED.busptr);
 
@@ -674,6 +710,9 @@ namespace boardTasks
         return true;
    }
 
+      /**
+     * @brief sets up board based on inputs given from broadcast message
+     */
     void setupBoardWifi(const uint8_t * mac, const uint8_t *inData, int len)
     {
 
@@ -703,7 +742,8 @@ namespace boardTasks
             if(thisBoard.redLEDOn)
             {
                 Serial.printf("Red LED Enabled\n");
-                strobeLED::redLED.power = wifiData.redLEDPower / 1000.0 * POWER_RESISTOR_VALUE;
+                //strobeLED::redLED.power = wifiData.redLEDPower / 1000.0 * POWER_RESISTOR_VALUE;
+                setLEDPower(&strobeLED::redLED, wifiData.redLEDPower);
                 if(wifiData.redLEDFrequency == 0)
                 {
                     strobeLED::redLED.flashingEnabled = false;
@@ -711,14 +751,16 @@ namespace boardTasks
                 }
                 else{
                     strobeLED::redLED.flashingEnabled = true;
-                    strobeLED::redLED.period_us = ( 1.0 / wifiData.redLEDFrequency  ) * 1000000.0;
+                    //strobeLED::redLED.period_us = ( 1.0 / (wifiData.redLEDFrequency * 2.0)  ) * 1000000.0;
+                    setLEDFrequency(&strobeLED::redLED, wifiData.redLEDFrequency);
                 }
                 Serial.printf("Red LED Power: %lf, Red LED Period: %lf\n", strobeLED::redLED.power, strobeLED::redLED.period_us); 
             }
             if(thisBoard.blueLEDOn)
             {
                 Serial.printf("Blue LED Enabled\n");
-                strobeLED::blueLED.power = wifiData.blueLEDPower  / 1000.0 * POWER_RESISTOR_VALUE;
+                //strobeLED::blueLED.power = wifiData.blueLEDPower  / 1000.0 * POWER_RESISTOR_VALUE;
+                setLEDPower(&strobeLED::blueLED, wifiData.blueLEDPower);
                 if(wifiData.blueLEDFrequency == 0)
                 {
                     strobeLED::blueLED.flashingEnabled = false;
@@ -727,12 +769,15 @@ namespace boardTasks
                 else
                 {
                     strobeLED::blueLED.flashingEnabled = true;
-                    strobeLED::blueLED.period_us = ( 1.0 / wifiData.blueLEDFrequency  ) * 1000000.0; 
+                    //strobeLED::blueLED.period_us = ( 1.0 / (wifiData.blueLEDFrequency * 2.0)  ) * 1000000.0; 
+                    setLEDFrequency(&strobeLED::blueLED, wifiData.blueLEDFrequency);
                 }
                 Serial.printf("Blue LED Power: %lf, Blue LED Period: %lf\n", strobeLED::blueLED.power, strobeLED::blueLED.period_us); 
             }
             Serial.printf("Now setting up peripherals\n");
             setupPeripherals();
+            createTasks();
+            Serial.printf("Finished setting up board");
         }
         else
         {
@@ -750,12 +795,14 @@ namespace boardTasks
 
                 if(thisBoard.redLEDOn)
                 {
-                    strobeLED::redLED.period_us = ( 1.0 / wifiData.redLEDFrequency  ) * 1000000.0;
+                    //strobeLED::redLED.period_us = ( 1.0 / (wifiData.redLEDFrequency*2.0)  ) * 1000000.0;
+                    setLEDFrequency(&strobeLED::redLED, wifiData.redLEDFrequency);
                     Serial.printf("Red LED Period: %lf\n", strobeLED::redLED.period_us); 
                 }
                 if(thisBoard.blueLEDOn)
                 {
-                    strobeLED::blueLED.period_us = ( 1.0 / wifiData.blueLEDFrequency  ) * 1000000.0;
+                    //strobeLED::blueLED.period_us = ( 1.0 / (wifiData.blueLEDFrequency*2.0)  ) * 1000000.0;
+                    setLEDFrequency(&strobeLED::blueLED, wifiData.blueLEDFrequency);
                     Serial.printf("Blue LED Period: %lf\n", strobeLED::blueLED.period_us); 
                 }
             }
@@ -765,17 +812,85 @@ namespace boardTasks
 
                 if(thisBoard.redLEDOn)
                 {
-                    strobeLED::redLED.power = wifiData.redLEDPower / 1000.0 * POWER_RESISTOR_VALUE;
+                    //strobeLED::redLED.power = wifiData.redLEDPower / 1000.0 * POWER_RESISTOR_VALUE;
+                    setLEDPower(&strobeLED::redLED, wifiData.redLEDPower);
                     Serial.printf("Red LED Power: %lf\n", strobeLED::redLED.power); 
                 }
                 if(thisBoard.blueLEDOn)
                 {
-                    strobeLED::blueLED.power = wifiData.blueLEDPower / 1000.0 * POWER_RESISTOR_VALUE;
+                    //strobeLED::blueLED.power = wifiData.blueLEDPower / 1000.0 * POWER_RESISTOR_VALUE;
+                    setLEDPower(&strobeLED::blueLED, wifiData.blueLEDPower);
                     Serial.printf("Blue LED Power: %lf\n", strobeLED::blueLED.power); 
                 }
             }
             Serial.printf("Now setting up board for parameter optimization\n");
             setupBoardForParameterOptimization();
+        }
+    }
+
+
+    void createTasks()
+    {
+        if(boardTasks::thisBoard.manualMode)
+        {
+            //only tasks that are needed for manual mode go here
+    
+            // nothing more needed actually
+            Serial.printf("Attaching Tasks\n"); 
+    
+            if(boardTasks::thisBoard.redLEDOn)
+            {
+                xTaskCreatePinnedToCore(
+                    ledTasks::toggleLED,      // Function that should be called
+                    "Toggling red LED",             // Name of the task (for debugging)
+                    5000,                            // Stack size (bytes)
+                    &strobeLED::redLED,                           // Parameter to pass
+                    7,                               // Task priority
+                    &TaskHandlers::redLEDToggle, // Task handle
+                    1                                // Pin to core 1
+                );
+    
+                if(strobeLED::redLED.flashingEnabled)
+                {
+                    xTaskCreatePinnedToCore(
+                        ledTasks::flashLED,      // Function that should be called
+                        "Flashing red LED",             // Name of the task (for debugging)
+                        5000,                            // Stack size (bytes)
+                        &strobeLED::redLED,                           // Parameter to pass
+                        7,                               // Task priority
+                        &TaskHandlers::redLEDFlash, // Task handle
+                        1                                // Pin to core 1
+                    );
+                }
+                
+            }
+            
+            if(boardTasks::thisBoard.blueLEDOn)
+            {
+                xTaskCreatePinnedToCore(
+                    ledTasks::toggleLED,      // Function that should be called
+                    "Toggling blue LED",             // Name of the task (for debugging)
+                    5000,                            // Stack size (bytes)
+                    &strobeLED::blueLED,                           // Parameter to pass
+                    7,                               // Task priority
+                    &TaskHandlers::blueLEDToggle, // Task handle
+                    1                                // Pin to core 1
+                );
+    
+                if(strobeLED::blueLED.flashingEnabled)
+                {
+                    xTaskCreatePinnedToCore(
+                        ledTasks::flashLED,      // Function that should be called
+                        "Flashing blue LED",             // Name of the task (for debugging)
+                        5000,                            // Stack size (bytes)
+                        &strobeLED::blueLED,                           // Parameter to pass
+                        7,                               // Task priority
+                        &TaskHandlers::blueLEDFlash, // Task handle
+                        1                                // Pin to core 1
+                    );
+                }
+                
+            }
         }
     }
 

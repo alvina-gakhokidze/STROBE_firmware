@@ -120,8 +120,8 @@ namespace strobeLED
     {
 
         float period_ms = this->period_us / 1000.0;
-        xTimerChangePeriod(this->timerHandle, pdMS_TO_TICKS(period_ms), (TickType_t) 10);
-        xTimerStart(this->timerHandle, (TickType_t) 10);
+        xTimerChangePeriod(this->timerHandle, pdMS_TO_TICKS(period_ms), (TickType_t) 3);
+        xTimerStart(this->timerHandle, (TickType_t) 3);
         xSemaphoreGive(this->onSemaphore); 
     }
 

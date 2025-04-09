@@ -1,3 +1,7 @@
+/**
+ * This file defines starting and default parameters for the extremum seeking controllers
+ */
+
 
 #define SAT_UPP_LIMIT 4.95 //in volts
 
@@ -13,7 +17,4 @@
 
 #define FREQUENCY_GAIN 0.05 // filler
 
-#define FREQUENCY_PERTURBATION_PERIOD 50.0
-
-// this will throw error if period is 0 because we create a timer based on the period
-
+#define FREQUENCY_PERTURBATION_PERIOD 50.0 // in seconds

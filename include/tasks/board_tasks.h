@@ -892,6 +892,173 @@ namespace boardTasks
                 
             }
         }
+        if(!boardTasks::thisBoard.manualMode)
+        {
+            if(boardTasks::thisBoard.redLEDOn)
+            {
+                xTaskCreatePinnedToCore(
+                    ledTasks::updateFlyCountTask,      // Function that should be called
+                    "Bite Count red LED",             // Name of the task (for debugging)
+                    10000,                            // Stack size (bytes)
+                    &strobeLED::redLED,                           // Parameter to pass
+                    4,                               // Task priority
+                    &TaskHandlers::getRedLEDFlyCount, // Task handle
+                    1                                // Pin to core 0
+                );
+
+                xTaskCreatePinnedToCore(
+                    filterTasks::initFilter,      // Function that should be called
+                    "Init Filter for red LED",             // Name of the task (for debugging)
+                    10000,                            // Stack size (bytes)
+                    &dataSmoother::redLEDData,                           // Parameter to pass
+                    4,                               // Task priority
+                    &TaskHandlers::redMovingAverage, // Task handle
+                    1                                // Pin to core 0
+                );
+        
+
+                xTaskCreatePinnedToCore(
+                    filterTasks::finiteDifferenceDerivative,           // Function that should be called
+                    "FDD for redLED",               // Name of the task (for debugging)
+                    6000,                                  // Stack size (bytes)
+                    &filterTasks::redLEDFilter,                    // Parameter to pass
+                    2,                                      // Task priority
+                    &TaskHandlers::redFDDFilter,      // Task handle
+                    0                                       // Pin to core 0
+                );
+                
+                if(boardTasks::thisBoard.powerOn)
+                {
+                    xTaskCreatePinnedToCore(
+                        filterTasks::highPassFilterTask,           // Function that should be called
+                        "HighPass Power Filter for redLED",               // Name of the task (for debugging)
+                        6000,                                  // Stack size (bytes)
+                        &Filter::redLEDPowerFilter,                    // Parameter to pass
+                        2,                                      // Task priority
+                        &TaskHandlers::redLEDPowerHighPass,      // Task handle
+                        0                                       // Pin to core 0
+                    );
+
+                    xTaskCreatePinnedToCore(
+                        ESCTasks::ESCCalculations,           // Function that should be called
+                        "Power ESC for redLED",               // Name of the task (for debugging)
+                        10000,                                  // Stack size (bytes)
+                        &ESCTasks::redPower,                    // Parameter to pass
+                        2,                                      // Task priority
+                        &TaskHandlers::redLEDPowerESC,      // Task handle
+                        0                                       // Pin to core 0
+                    );
+
+                }
+
+                if(boardTasks::thisBoard.frequencyOn)
+                {
+                    xTaskCreatePinnedToCore(
+                        filterTasks::highPassFilterTask,           // Function that should be called
+                        "HighPass Frequency Filter for redLED",               // Name of the task (for debugging)
+                        10000,                                  // Stack size (bytes)
+                        &Filter::redLEDFrequencyFilter,                    // Parameter to pass
+                        2,                                      // Task priority
+                        &TaskHandlers::redLEDFrequencyHighPass,      // Task handle
+                        0                                       // Pin to core 0
+                    );
+
+                    xTaskCreatePinnedToCore(
+                        ESCTasks::ESCCalculations,           // Function that should be called
+                        "Frequency ESC for redLED",               // Name of the task (for debugging)
+                        10000,                                  // Stack size (bytes)
+                        &ESCTasks::redFrequency,                    // Parameter to pass
+                        2,                                      // Task priority
+                        &TaskHandlers::redLEDFrequencyESC,      // Task handle
+                        0                                       // Pin to core 0
+                    );
+                }
+        }
+            
+            if(boardTasks::thisBoard.blueLEDOn)
+            {
+                xTaskCreatePinnedToCore(
+                    ledTasks::updateFlyCountTask,      // Function that should be called
+                    "Bite Count Blue LED",             // Name of the task (for debugging)
+                    10000,                            // Stack size (bytes)
+                    &strobeLED::blueLED,                           // Parameter to pass
+                    4,                               // Task priority
+                    &TaskHandlers::getBlueLEDFlyCount, // Task handle
+                    1                                // Pin to core 0
+                );
+
+                xTaskCreatePinnedToCore(
+                    filterTasks::initFilter,      // Function that should be called
+                    "Init Filter for blue LED",             // Name of the task (for debugging)
+                    10000,                            // Stack size (bytes)
+                    &dataSmoother::blueLEDData,                           // Parameter to pass
+                    4,                               // Task priority
+                    &TaskHandlers::blueMovingAverage, // Task handle
+                    1                                // Pin to core 0
+                );
+        
+                xTaskCreatePinnedToCore
+                (
+                    filterTasks::finiteDifferenceDerivative,           // Function that should be called
+                    "FDD for blueLED",               // Name of the task (for debugging)
+                    10000,                                  // Stack size (bytes)
+                    &filterTasks::blueLEDFilter,                    // Parameter to pass
+                    2,                                      // Task priority
+                    &TaskHandlers::blueFDDFilter,      // Task handle
+                    0                                       // Pin to core 0
+                );
+
+                
+
+                if(boardTasks::thisBoard.powerOn)
+                {
+                    xTaskCreatePinnedToCore(
+                        filterTasks::highPassFilterTask,           // Function that should be called
+                        "HighPass Power Filter for blueLED",               // Name of the task (for debugging)
+                        10000,                                  // Stack size (bytes)
+                        &Filter::blueLEDPowerFilter,                    // Parameter to pass
+                        2,                                      // Task priority
+                        &TaskHandlers::blueLEDPowerHighPass,      // Task handle
+                        0                                       // Pin to core 0
+                    );
+
+                    xTaskCreatePinnedToCore(
+                        ESCTasks::ESCCalculations,           // Function that should be called
+                        "Power ESC for blueLED",               // Name of the task (for debugging)
+                        10000,                                  // Stack size (bytes)
+                        &ESCTasks::bluePower,                    // Parameter to pass
+                        2,                                      // Task priority
+                        &TaskHandlers::blueLEDPowerESC,      // Task handle
+                        0                                       // Pin to core 0
+                    );
+
+                }
+
+                if(boardTasks::thisBoard.frequencyOn)
+                {
+                    xTaskCreatePinnedToCore(
+                        filterTasks::highPassFilterTask,           // Function that should be called
+                        "HighPass Frequency Filter for blueLED",               // Name of the task (for debugging)
+                        10000,                                  // Stack size (bytes)
+                        &Filter::blueLEDFrequencyFilter,                    // Parameter to pass
+                        2,                                      // Task priority
+                        &TaskHandlers::blueLEDFrequencyHighPass,      // Task handle
+                        0                                       // Pin to core 0
+                    );
+
+                    xTaskCreatePinnedToCore(
+                        ESCTasks::ESCCalculations,           // Function that should be called
+                        "Frequency ESC for blueLED",               // Name of the task (for debugging)
+                        10000,                                  // Stack size (bytes)
+                        &ESCTasks::blueFrequency,                    // Parameter to pass
+                        2,                                      // Task priority
+                        &TaskHandlers::blueLEDFrequencyESC,      // Task handle
+                        0                                       // Pin to core 0
+                    );
+                }
+                
+            }
+        }
     }
 
 }

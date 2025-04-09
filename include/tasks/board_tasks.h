@@ -836,7 +836,7 @@ namespace boardTasks
             //only tasks that are needed for manual mode go here
     
             // nothing more needed actually
-            Serial.printf("Attaching Tasks\n"); 
+            Serial.printf("Attaching Tasks for Manual Mode\n"); 
     
             if(boardTasks::thisBoard.redLEDOn)
             {
@@ -894,6 +894,7 @@ namespace boardTasks
         }
         if(!boardTasks::thisBoard.manualMode)
         {
+            Serial.printf("Attaching Tasks for Parameter Optimization Mode");
             if(boardTasks::thisBoard.redLEDOn)
             {
                 xTaskCreatePinnedToCore(

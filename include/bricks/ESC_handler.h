@@ -20,8 +20,7 @@ namespace Controllers
 
     class ESC
     {
-        // so we need data to store past and current derivative values
-        // need data to store past and current integral values
+
         private:
             const char* name;
 
@@ -151,7 +150,7 @@ namespace Controllers
 
 
     /**
-     * @brief chnages sign of power perturbation signal
+     * @brief changes sign of power perturbation signal
      */
     void powerESCCallback(TimerHandle_t xTimer)
     {
@@ -167,17 +166,5 @@ namespace Controllers
     }
 
 }
-
-// so for timers we need callback functions
-
-// and these callback functions cannot have inputs
-
-// but we need the function to change the sign of a variable that determines the state of the perturbation signal.
-
-// so i ownder if we need to write four callback functions...
-
-// or should we only write two callbacks, one for power one for frequency. Then the state of each LED will change simultanously, 
-// but i thinkk that hsould be ok becuase they'll both be working at the same time anyway (red and blue) if at all
-
 
 

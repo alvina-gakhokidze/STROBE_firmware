@@ -1,3 +1,7 @@
+/**
+ * This is the main config file. It defines all the libraries needed and hardware limits for the PCBs
+ */
+
 #include <Arduino.h>
 #include <Wire.h>
 #include <Preferences.h>
@@ -8,20 +12,19 @@
 #include <esp_now.h>
 #include <WiFi.h>
 
-#define CURR_UPP_LIMIT 900
+#define CURR_UPP_LIMIT 900 //mA
 
-#define CURR_LOW_LIMIT 100
+#define CURR_LOW_LIMIT 100 //mA
 
+#define FREQ_UPP_LIMIT 100.0 //Hz
 
-#define FREQ_UPP_LIMIT 200.0
+#define FREQ_LOW_LIMIT 0.0 //Hz
 
-#define FREQ_LOW_LIMIT 0.0
-
-#define DEFAULT_LOW_PERIOD_US 100000
-// average sip lasts 100ms. this will make sure led (mostly) doesn't flash during that
+#define DEFAULT_LOW_PERIOD_US 100000 //us
 
 #define POWER_RESISTOR_VALUE 5.0 // in ohms
-// i need to define special case for if frequency is 0
 
+#define DEBUG_LED_BLUE 41
+#define DEBUG_LED_RED 42
+// pins 39, 40, 41, and 42 can all be used as toggle pins for firmware debugging
 
-#define DEBUG_LED 41

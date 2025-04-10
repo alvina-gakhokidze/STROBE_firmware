@@ -7,7 +7,8 @@
 
 
 /**
- * In this file, we want to develop all the functions that interpret data from the interupts, and create queues
+ * This file is for the parameter optimization mode. Here is where we develop the moving average filter to smooth the data before it's processed further and fed to the controllers
+ * The values are stored in a queue, and the moving average filter is applied with O(1) complexity once the queue is full. 
 */
 
 
@@ -106,8 +107,9 @@ namespace dataSmoother
    
     /**
      * @brief timer callback function to add flyCount value to redQueue at rate of 100Hz (which is how quickly the CAPDAC updates)
+     * This is meant for filling up the queue initially
     */
-    void redQueueFill(TimerHandle_t xhandle) //ALVINA since we're then using this as a regular function there may be problems
+    void redQueueFill(TimerHandle_t xhandle) //Potential problem: since we're then using this as a regular function there may be problems
     {
         if(xQueueSendToBack(redLEDData.q_handle, (void*) &strobeLED::redLEDFlyCount, 0) == pdTRUE){
             
@@ -121,8 +123,9 @@ namespace dataSmoother
 
     /**
      * @brief timer callback function to add flyCount value to blueQueue at rate of 100Hz (which is how quickly the CAPDAC updates)
+     * This is meant for filling up the queue initially. 
     */
-    void blueQueueFill(TimerHandle_t xhandle) // ALVINA since we're then using this as a regular function there may be problems
+    void blueQueueFill(TimerHandle_t xhandle) // potential problem: since we're then using this as a regular function there may be problems
     {
         if(xQueueSendToBack(blueLEDData.q_handle, (void*) &strobeLED::blueLEDFlyCount, 0) == pdTRUE)
         {
@@ -161,17 +164,5 @@ namespace dataSmoother
         blueLEDData.newMovingBiteAverage = ( blueLEDData.oldMovingBiteAverage * (float) MOVING_AVERAGE_FILTER_DEPTH - oldNum + newNum ) / ( (float) MOVING_AVERAGE_FILTER_DEPTH ) ;
         xSemaphoreGive(blueLEDData.q_semaphore);
     }
-
-
-
-
-    // so we have software timers for updating the sampling queue
-    // we also need to take the derivatives of these new values
-    // and then we need to put the derivatives through a high pass filter
-
-
-
-
-    
 
 }

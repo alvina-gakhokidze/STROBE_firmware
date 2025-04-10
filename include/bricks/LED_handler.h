@@ -22,11 +22,6 @@ namespace strobeLED
     int redLEDFlyCount;
     int blueLEDFlyCount;
 
-
-
-    // void IRAM_ATTR redLEDOnCallback();
-    // void IRAM_ATTR blueLEDOnCallback();
-
     void redLEDOnCallback(TimerHandle_t xhandle);
     void blueLEDOnCallback(TimerHandle_t xhandle);
 
@@ -37,12 +32,10 @@ namespace strobeLED
 
             int timerNum;
             int gpio;
-            //void (*interruptFunction)(void); // not entirely sure that this will work but let's give it a try
             TimerCallbackFunction_t interruptFunction;
             void attachTimer();
         
         public:
-            //hw_timer_t* timerHandle;
             TimerHandle_t timerHandle; 
             TwoWire* busptr;
             volatile float period_us; // stores flashing frequency
@@ -51,11 +44,11 @@ namespace strobeLED
             bool ledOn;
             bool flashingEnabled = true; // default set to true
             volatile unsigned ledFlyCount;
-            volatile SemaphoreHandle_t ledSemaphore = NULL; // hopefully it's overwritten later
-            volatile SemaphoreHandle_t onSemaphore = NULL; // hopefully it's overwritten later
-            volatile SemaphoreHandle_t offSemaphore = NULL; // hopefully it's overwritten later
-            volatile SemaphoreHandle_t onFlashSemaphore = NULL; // hopefully it's overwritten later
-            volatile SemaphoreHandle_t offFlashSemaphore = NULL; // hopefully it's overwritten later
+            volatile SemaphoreHandle_t ledSemaphore = NULL; 
+            volatile SemaphoreHandle_t onSemaphore = NULL; 
+            volatile SemaphoreHandle_t offSemaphore = NULL; 
+            volatile SemaphoreHandle_t onFlashSemaphore = NULL; 
+            volatile SemaphoreHandle_t offFlashSemaphore = NULL; 
             
             LED(TwoWire* ledptr, float period_us, float power, bool state);
 
@@ -94,14 +87,13 @@ namespace strobeLED
         this->period_us = period_us;
         this->power = power;
         this->state = state;
-        //this->timerHandle = timerBegin(this->timerNum, 80, true);
         this->timerHandle = NULL;
         this->ledSemaphore = xSemaphoreCreateBinary();
         this->onSemaphore = xSemaphoreCreateBinary();
         this->offSemaphore = xSemaphoreCreateBinary();
         this->onFlashSemaphore = xSemaphoreCreateBinary();
         this->offFlashSemaphore = xSemaphoreCreateBinary();
-        attachTimer(); // can i do this? use a method inside of the class constructor
+        attachTimer();
     }
 
     /**
@@ -109,8 +101,6 @@ namespace strobeLED
     */
     void LED::cancel()
     {
-        //timerEnd(this->timerHandle); // do we ever actually need to do this?
-        //registerTalk::ledOff(this->busptr);
         xTimerStop(this->timerHandle, (TickType_t) 10);
         xTimerDelete(this->timerHandle, (TickType_t) 10);
     }
@@ -120,9 +110,7 @@ namespace strobeLED
     */
     void LED::attachTimer()
     {
-        // timerAttachInterrupt(this->timerHandle, this->interruptFunction, true);
         this->timerHandle = xTimerCreate("redLED", pdMS_TO_TICKS(this->period_us/1000.0), pdTRUE, nullptr, this->interruptFunction);
-        
     }
     
    /**
@@ -131,27 +119,10 @@ namespace strobeLED
     void LED::trigger()
     {
 
-        //this->state = true; // because it was triggered
-        // so that when redLED calback is called, we enter TRUE
-
-        //digitalWrite(DEBUG_LED,HIGH);
         float period_ms = this->period_us / 1000.0;
-        xTimerChangePeriod(this->timerHandle, pdMS_TO_TICKS(period_ms), (TickType_t) 10);
-        xTimerStart(this->timerHandle, (TickType_t) 10);
-        
-        // timerAlarmWrite(this->timerHandle, this->period_us, true); // have to write a new alarm each time because the period_us will change
-        // // OOLVOONOO is it correct to feed the period in microseconds? i dont think so
-        // timerAlarmEnable(this->timerHandle);
-        
-        
-        xSemaphoreGive(this->onSemaphore);
-        // SEMAPHORE TAKE? i dont think so
-        this->ledFlyCount++;
-        //digitalWrite(DEBUG_LED,HIGH); 
-        
-        //this->ledOn = true;
-        
-        
+        xTimerChangePeriod(this->timerHandle, pdMS_TO_TICKS(period_ms), (TickType_t) 3);
+        xTimerStart(this->timerHandle, (TickType_t) 3);
+        xSemaphoreGive(this->onSemaphore); 
     }
 
     void LED::deTrigger()
@@ -159,47 +130,22 @@ namespace strobeLED
         //this->state = false;
 
         xTimerStop(this->timerHandle, (TickType_t) 3);
-        //timerAlarmDisable(this->timerHandle);
         xSemaphoreGive(this->ledSemaphore); //unblock task with this function
-        // this semaphore wouldn't give when we were doing trigger() for some reason
-       
         xSemaphoreGive(this->offSemaphore);
-
-        //this->ledOn=false;
-        //digitalWrite(DEBUG_LED,LOW);
-
-       
-        
-        //registerTalk::ledOff(this->busptr);
-
-        //digitalWrite(DEBUG_LED, LOW);
-
         xSemaphoreTake(this->onSemaphore, (TickType_t) 1); // taking remaining semaphore
-        // xSemaphoreTake(this->onFlashSemaphore, (TickType_t) 1);
-       
-        //registerTalk::ledOff(this->busptr); 
     }
 
 
-    LED redLED(&redLEDBus, DEFAULT_LOW_PERIOD_US, 1, true); //OOLVOONOO set initial period to something really large
-    LED blueLED(&blueLEDBus, DEFAULT_LOW_PERIOD_US, 1, true); //OOLVOONOO set initial period to something really large
+    LED redLED(&redLEDBus, DEFAULT_LOW_PERIOD_US, 1, true); 
+    LED blueLED(&blueLEDBus, DEFAULT_LOW_PERIOD_US, 1, true); 
 
     /**
      * @brief callback function for turning red LED on/off with timer
     */
     void redLEDOnCallback(TimerHandle_t xhandle)
     {
-        // redLED.state ? registerTalk::ledControlOn(redLED.busptr, redLED.power) : registerTalk::ledOff(redLED.busptr);
-        // redLED.state = !redLED.state;
-        //digitalWrite(DEBUG_LED, LOW);
         redLED.state ? xSemaphoreGive(redLED.onSemaphore) : xSemaphoreGive(redLED.offSemaphore);
-        //digitalWrite(DEBUG_LED, redLED.state);
-        //digitalWrite(DEBUG_LED, redLED.state);
         redLED.state = !redLED.state;
-        
-
-        // redLED.state ? digitalWrite(DEBUG_LED,HIGH) : digitalWrite(DEBUG_LED,LOW);
-        // redLED.state = !redLED.state;
     }
 
     /**
@@ -207,9 +153,6 @@ namespace strobeLED
     */
     void blueLEDOnCallback(TimerHandle_t xhandle)
     {
-        // blueLED.state ? registerTalk::ledControlOn(blueLED.busptr, blueLED.power) : registerTalk::ledOff(blueLED.busptr);
-        // blueLED.state = !blueLED.state;
-
         blueLED.state ? xSemaphoreGive(blueLED.onSemaphore) : xSemaphoreGive(blueLED.offSemaphore);
         blueLED.state = !blueLED.state;
     }
@@ -223,16 +166,7 @@ namespace strobeLED
     */
     void IRAM_ATTR changeRedLEDFlash()
     {
-        //digitalRead(RED_INT) ? digitalWrite(DEBUG_LED,HIGH) : digitalWrite(DEBUG_LED, LOW);
-        //digitalRead(RED_INT) ?  redLED.trigger() : redLED.deTrigger();
         digitalRead(RED_INT) ?  xSemaphoreGiveFromISR(redLED.onFlashSemaphore, NULL) : xSemaphoreGiveFromISR(redLED.offFlashSemaphore,NULL);
-        //digitalRead(RED_INT) ? digitalWrite(DEBUG_LED, HIGH) : digitalWrite(DEBUG_LED, LOW);
-
-        // digitalRead(RED_INT) ?  digitalWrite(DEBUG_LED, HIGH) : digitalWrite(DEBUG_LED, LOW);
-        
-        // digitalRead(RED_INT) ? redLED.ledOn = true : redLED.ledOn = false;
-
-        // so we know we enter this
     }
 
     /**
@@ -244,7 +178,6 @@ namespace strobeLED
     */
     void IRAM_ATTR changeBlueLEDFlash()
     {
-        //digitalRead(BLUE_INT) ?  blueLED.trigger() : blueLED.deTrigger();
         digitalRead(BLUE_INT) ?  xSemaphoreGiveFromISR(blueLED.onFlashSemaphore, NULL) : xSemaphoreGiveFromISR(blueLED.offFlashSemaphore,NULL);
     }
 
@@ -253,17 +186,12 @@ namespace strobeLED
 
         if(digitalRead(RED_INT))
         {
-            // registerTalk::ledControlOn(redLED.busptr, redLED.power);
-            // redLED.ledFlyCount++; // increment total number of interactions
-            // xSemaphoreGiveFromISR(redLED.ledSemaphore, NULL); //unblock task with this function
-            //redLED.ledOn = true;
             xSemaphoreGiveFromISR(redLED.onSemaphore, NULL); //unblock task with this function
             xSemaphoreGiveFromISR(redLED.ledSemaphore,NULL); //unblock task with this function
             redLED.ledFlyCount++;
         }
         else
         {
-            //registerTalk::ledOff(redLED.busptr);
             xSemaphoreGiveFromISR(redLED.offSemaphore, NULL); //unblock task with this function
         }
     }
@@ -273,17 +201,12 @@ namespace strobeLED
 
         if(digitalRead(BLUE_INT))
         {
-            //registerTalk::ledControlOn(blueLED.busptr, blueLED.power);
-            //blueLED.ledFlyCount++;
-            //xSemaphoreGiveFromISR(blueLED.ledSemaphore, NULL); //unblock task with this function
-            //blueLED.ledOn = true;
             xSemaphoreGiveFromISR(blueLED.onSemaphore, NULL); //unblock task with this function
             xSemaphoreGiveFromISR(blueLED.ledSemaphore, NULL); //unblock task with this function
             blueLED.ledFlyCount++;
         }
         else
         {
-            //registerTalk::ledOff(blueLED.busptr);
             xSemaphoreGiveFromISR(blueLED.offSemaphore, NULL); //unblock task with this function
         }
     }
